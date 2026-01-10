@@ -305,14 +305,13 @@ getgenv().Loaded = true
             )
         end
 
-        -- Update Draggify for mobile: handles both mouse, touch with proper state & bounds
+        -- Update Draggify for mobile: handles both mouse, touch without clamping to screen bounds
         function Library:Draggify(Parent)
             local Dragging = false
             local StartPos, StartInput
             local Camera = workspace.CurrentCamera
             local UIS = game:GetService("UserInputService")
 
-            -- improved: use a BindableEvent so move works on all platforms
             local function beginDrag(input)
                 Dragging = true
                 StartInput = input.Position
@@ -348,13 +347,8 @@ getgenv().Loaded = true
                 local newX = StartPos.X.Offset + delta.X
                 local newY = StartPos.Y.Offset + delta.Y
 
-                -- Clamp so user can't drag window offscreen (helpful for mobile, too)
-                local viewport = Camera.ViewportSize
-                local objSize = Parent.AbsoluteSize
-                local clampedX = math.clamp(newX, 0, viewport.X - objSize.X)
-                local clampedY = math.clamp(newY, 0, viewport.Y - objSize.Y)
-
-                Parent.Position = UDim2.new(0, clampedX, 0, clampedY)
+                -- No clamping, allow dragging through/outside the screen
+                Parent.Position = UDim2.new(0, newX, 0, newY)
             end)
 
             -- Fallback for legacy InputService or multi-touch cases
@@ -363,17 +357,13 @@ getgenv().Loaded = true
                         Input.UserInputType == Enum.UserInputType.MouseMovement or
                         (Input.UserInputType == Enum.UserInputType.Touch)
                     ) then
-                    local Camera = workspace.CurrentCamera
-                    local viewport = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
-                    local ObjectSize = Parent.AbsoluteSize
                     if not StartPos or not StartInput then return end
 
                     local newX = StartPos.X.Offset + (Input.Position.X - StartInput.X)
                     local newY = StartPos.Y.Offset + (Input.Position.Y - StartInput.Y)
-                    local clampedX = math.clamp(newX, 0, viewport.X - ObjectSize.X)
-                    local clampedY = math.clamp(newY, 0, viewport.Y - ObjectSize.Y)
 
-                    Parent.Position = UDim2.new(0, clampedX, 0, clampedY)
+                    -- No clamping here either
+                    Parent.Position = UDim2.new(0, newX, 0, newY)
                 end
             end)
         end 
@@ -3017,3 +3007,5 @@ local Tab = window:Tab({
         end
 
 return Library, Flags
+
+print("anana")
