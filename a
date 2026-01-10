@@ -897,35 +897,54 @@ end
                 Cfg.Callback(Color, a)
             end
 
-            function Cfg.UpdateColor() 
-                local Mouse = InputService:GetMouseLocation()
-                local offset = vec2(Mouse.X, Mouse.Y - gui_offset) 
-                
+            -- Enhanced color picker dragging to support both mouse and touch/mobile UI
+
+            function Cfg.UpdateColor(input)
+                local pos
+                if input and (input.Position ~= nil) then
+                    -- Touch input
+                    pos = input.Position
+                else
+                    -- Mouse fallback
+                    local Mouse = InputService:GetMouseLocation()
+                    pos = vec2(Mouse.X, Mouse.Y - gui_offset)
+                end
+
                 if DraggingSat then	
-                    s = math.clamp((offset - Items.Val.AbsolutePosition).X / Items.Val.AbsoluteSize.X, 0, 1)
-                    v = 1 - math.clamp((offset - Items.Val.AbsolutePosition).Y / Items.Val.AbsoluteSize.Y, 0, 1)
+                    s = math.clamp((pos - Items.Val.AbsolutePosition).X / Items.Val.AbsoluteSize.X, 0, 1)
+                    v = 1 - math.clamp((pos - Items.Val.AbsolutePosition).Y / Items.Val.AbsoluteSize.Y, 0, 1)
                 elseif DraggingHue then
-                    h = math.clamp((offset - Items.RGB.AbsolutePosition).Y / Items.RGB.AbsoluteSize.Y, 0, 1)
+                    h = math.clamp((pos - Items.RGB.AbsolutePosition).Y / Items.RGB.AbsoluteSize.Y, 0, 1)
                 elseif DraggingAlpha then
-                    a = math.clamp((offset - Items.Alpha.AbsolutePosition).Y / Items.Alpha.AbsoluteSize.Y, 0, 1)
+                    a = math.clamp((pos - Items.Alpha.AbsolutePosition).Y / Items.Alpha.AbsoluteSize.Y, 0, 1)
                 end
 
                 Cfg.Set()
             end
 
+            -- Mouse or tap to open the UI
             Items.Button.MouseButton1Click:Connect(function()
                 Cfg.Open = not Cfg.Open
                 Cfg.SetVisible(Cfg.Open)            
             end)
+            if Items.Button.TouchTap then
+                Items.Button.TouchTap:Connect(function()
+                    Cfg.Open = not Cfg.Open
+                    Cfg.SetVisible(Cfg.Open)
+                end)
+            end
 
+            -- Respond to mouse drag and mobile touch Pan
             InputService.InputChanged:Connect(function(input)
-                if (DraggingSat or DraggingHue or DraggingAlpha) and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    Cfg.UpdateColor() 
+                if (DraggingSat or DraggingHue or DraggingAlpha) and 
+                    (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    Cfg.UpdateColor(input)
                 end
             end)
 
+            -- Reset dragging on mouseup or touch ended
             Library:Connection(InputService.InputEnded, function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     DraggingSat = false
                     DraggingHue = false
                     DraggingAlpha = false
@@ -937,8 +956,9 @@ end
                 end
             end)    
 
+            -- For tapping/clicking outside to close on mobile or desktop
             Library:Connection(InputService.InputBegan, function(input, game_event)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     if not Library:Hovering({Items.Button, Items.Window}) then
                         Cfg.SetVisible(false)
                         Cfg.Open = false
@@ -946,17 +966,32 @@ end
                 end 
             end)
 
-            Items.Alpha.MouseButton1Down:Connect(function()
-                DraggingAlpha = true 
-            end)
-            
-            Items.RGB.MouseButton1Down:Connect(function()
-                DraggingHue = true 
-            end)
-            
-            Items.Val.MouseButton1Down:Connect(function()
-                DraggingSat = true  
-            end)
+            local function assign_input_handlers(UIElement, drag_var_name)
+                -- Handle both mouse & touch for all pickers
+                if UIElement.MouseButton1Down then
+                    UIElement.MouseButton1Down:Connect(function()
+                        _G[drag_var_name] = false -- Just in case
+                        _G[drag_var_name] = true
+                    end)
+                end
+                if UIElement.TouchTap then
+                    UIElement.TouchTap:Connect(function()
+                        _G[drag_var_name] = false
+                        _G[drag_var_name] = true
+                    end)
+                end
+                if UIElement.TouchLongPress then
+                    UIElement.TouchLongPress:Connect(function()
+                        _G[drag_var_name] = false
+                        _G[drag_var_name] = true
+                    end)
+                end
+            end
+
+            assign_input_handlers(Items.Alpha, "DraggingAlpha")
+            assign_input_handlers(Items.RGB, "DraggingHue")
+            assign_input_handlers(Items.Val, "DraggingSat")
+
 
             Items.RGBInput.FocusLost:Connect(function()
                 local text = Items.RGBInput.Text
