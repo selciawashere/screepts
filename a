@@ -924,12 +924,12 @@ getgenv().Loaded = true
                 end
 
                 if DraggingSat then	
-                    s = math.clamp((pos - Items.Val.AbsolutePosition).X / Items.Val.AbsoluteSize.X, 0, 1)
-                    v = 1 - math.clamp((pos - Items.Val.AbsolutePosition).Y / Items.Val.AbsoluteSize.Y, 0, 1)
+                    s = ((pos - Items.Val.AbsolutePosition).X / Items.Val.AbsoluteSize.X)
+                    v = 1 - ((pos - Items.Val.AbsolutePosition).Y / Items.Val.AbsoluteSize.Y)
                 elseif DraggingHue then
-                    h = math.clamp((pos - Items.RGB.AbsolutePosition).Y / Items.RGB.AbsoluteSize.Y, 0, 1)
+                    h = ((pos - Items.RGB.AbsolutePosition).Y / Items.RGB.AbsoluteSize.Y)
                 elseif DraggingAlpha then
-                    a = math.clamp((pos - Items.Alpha.AbsolutePosition).Y / Items.Alpha.AbsoluteSize.Y, 0, 1)
+                    a = ((pos - Items.Alpha.AbsolutePosition).Y / Items.Alpha.AbsoluteSize.Y)
                 end
 
                 Cfg.Set()
@@ -1393,9 +1393,8 @@ getgenv().Loaded = true
                         else
                             return
                         end
-                        local viewport = Camera.ViewportSize
-                        local newX = math.clamp(StartPos.X.Offset + delta.X, 0, viewport.X - Items.Window.AbsoluteSize.X)
-                        local newY = math.clamp(StartPos.Y.Offset + delta.Y, 0, viewport.Y - Items.Window.AbsoluteSize.Y)
+                        local newX = StartPos.X.Offset + delta.X
+                        local newY = StartPos.Y.Offset + delta.Y
                         Items.Window.Position = UDim2.new(0, newX, 0, newY)
                     end
                 end
@@ -2035,7 +2034,7 @@ getgenv().Loaded = true
             end 
 
             function Cfg.Set(value)
-                Cfg.Value = math.clamp(Library:Round(value, Cfg.Intervals), Cfg.Min, Cfg.Max)
+                Cfg.Value = Library:Round(value, Cfg.Intervals)
 
                 Items.Fill.Size = dim2((Cfg.Value - Cfg.Min) / (Cfg.Max - Cfg.Min), 0, 1, 0)
                 Items.Value.Text = tostring(Cfg.Value) .. Cfg.Suffix
