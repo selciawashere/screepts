@@ -1,3 +1,4 @@
+print("assff")
 if getgenv().Loaded then 
     getgenv().Library:Unload()
 end 
