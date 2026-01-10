@@ -171,74 +171,74 @@ getgenv().Loaded = true
 
             return Tween
         end
-        function Library:Resizify(Parent)
-            local UIS = game:GetService("UserInputService")
-            local Camera = workspace.CurrentCamera
-        
-            -- === RESIZE HANDLE ===
-            local Resizing = Library:Create("TextButton", {
-                AnchorPoint = Vector2.new(1, 1);
-                Position = dim2(1, 0, 1, 0);
-                Size = UIS.TouchEnabled and dim2(0, 26, 0, 26) or dim2(0, 12, 0, 12);
-                BorderSizePixel = 0;
-                BackgroundTransparency = 1;
-                Text = "";
-                Parent = Parent;
-                ZIndex = 999;
-            })
-        
-            -- Optional visible corner (for debugging / UX)
-            -- Resizing.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        
-            local IsResizing = false
-            local StartInputPos
-            local StartSize
-        
-            local MIN_SIZE = Vector2.new(180, 120) -- mobile-safe minimum
-        
-            -- === INPUT BEGIN ===
-            Resizing.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                    IsResizing = true
-                    StartInputPos = input.Position
-                    StartSize = Parent.Size
-                end
-            end)
-        
-            -- === INPUT END ===
-            Resizing.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                    IsResizing = false
-                end
-            end)
-        
-            -- === INPUT MOVE ===
-            UIS.InputChanged:Connect(function(input)
-                if not IsResizing then return end
-                if input.UserInputType ~= Enum.UserInputType.MouseMovement
-                and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        
-                local delta = input.Position - StartInputPos
-                local viewport = Camera.ViewportSize
-        
-                local newX = math.clamp(
-                    StartSize.X.Offset + delta.X,
-                    MIN_SIZE.X,
-                    viewport.X - Parent.AbsolutePosition.X
-                )
-        
-                local newY = math.clamp(
-                    StartSize.Y.Offset + delta.Y,
-                    MIN_SIZE.Y,
-                    viewport.Y - Parent.AbsolutePosition.Y
-                )
-        
-                Parent.Size = UDim2.fromOffset(newX, newY)
-            end)
+function Library:Resizify(Parent)
+    local UIS = game:GetService("UserInputService")
+    local Camera = workspace.CurrentCamera
+
+    -- === RESIZE HANDLE ===
+    local Resizing = Library:Create("TextButton", {
+        AnchorPoint = Vector2.new(1, 1);
+        Position = dim2(1, 0, 1, 0);
+        Size = UIS.TouchEnabled and dim2(0, 26, 0, 26) or dim2(0, 12, 0, 12);
+        BorderSizePixel = 0;
+        BackgroundTransparency = 1;
+        Text = "";
+        Parent = Parent;
+        ZIndex = 999;
+    })
+
+    -- Optional visible corner (for debugging / UX)
+    -- Resizing.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+
+    local IsResizing = false
+    local StartInputPos
+    local StartSize
+
+    local MIN_SIZE = Vector2.new(180, 120) -- mobile-safe minimum
+
+    -- === INPUT BEGIN ===
+    Resizing.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            IsResizing = true
+            StartInputPos = input.Position
+            StartSize = Parent.Size
         end
-        
+    end)
+
+    -- === INPUT END ===
+    Resizing.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            IsResizing = false
+        end
+    end)
+
+    -- === INPUT MOVE ===
+    UIS.InputChanged:Connect(function(input)
+        if not IsResizing then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then return end
+
+        local delta = input.Position - StartInputPos
+        local viewport = Camera.ViewportSize
+
+        local newX = math.clamp(
+            StartSize.X.Offset + delta.X,
+            MIN_SIZE.X,
+            viewport.X - Parent.AbsolutePosition.X
+        )
+
+        local newY = math.clamp(
+            StartSize.Y.Offset + delta.Y,
+            MIN_SIZE.Y,
+            viewport.Y - Parent.AbsolutePosition.Y
+        )
+
+        Parent.Size = UDim2.fromOffset(newX, newY)
+    end)
+end
+
         
         function Library:Hovering(Object)
             local x, y
@@ -334,16 +334,18 @@ getgenv().Loaded = true
                     local Horizontal = Camera.ViewportSize.X
                     local Vertical = Camera.ViewportSize.Y
 
+                    if not InitialSize or not InitialPosition then return end
+
                     local NewPosition = dim2(
                         0,
                         math.clamp(
-                            IntialSize.X.Offset + (Input.Position.X - InitialPosition.X),
+                            InitialSize.X.Offset + (Input.Position.X - InitialPosition.X),
                             0,
                             Horizontal - Parent.Size.X.Offset
                         ),
                         0,
                         math.clamp(
-                            IntialSize.Y.Offset + (Input.Position.Y - InitialPosition.Y),
+                            InitialSize.Y.Offset + (Input.Position.Y - InitialPosition.Y),
                             0,
                             Vertical - Parent.Size.Y.Offset
                         )
