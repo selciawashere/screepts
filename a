@@ -1,4 +1,3 @@
-print("assff")
 if getgenv().Loaded then 
     getgenv().Library:Unload()
 end 
@@ -1155,6 +1154,45 @@ getgenv().Loaded = true
                 TabInfo;
                 Items = {};
             }
+
+            -- Set up touch/mouse drag support after constructing Items.Window
+            local function makeDraggable(frame)
+                local dragging = false
+                local dragStart, startPos
+
+                -- Touch support
+                frame.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = true
+                        dragStart = input.Position
+                        startPos = frame.Position
+                        input.Changed:Connect(function()
+                            if input.UserInputState == Enum.UserInputState.End then
+                                dragging = false
+                            end
+                        end)
+                    end
+                end)
+
+                frame.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        dragging = false
+                    end
+                end)
+
+                local UIS = game:GetService("UserInputService")
+                UIS.InputChanged:Connect(function(input)
+                    if not dragging then return end
+                    if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                    local delta = input.Position - dragStart
+                    frame.Position = UDim2.new(0, startPos.X.Offset + delta.X, 0, startPos.Y.Offset + delta.Y)
+                end)
+            end
+
+            Cfg._makeWindowDraggable = makeDraggable
+
+            -- Draggable function will be called on Items.Window right after it's created in the following code
+
 
             Library.Items = Library:Create("ScreenGui", {
                 Parent = CoreGui;
@@ -2855,10 +2893,10 @@ Items.Input = Library:Create("TextBox", {
 
         function Library:Configs(window) 
             local Text;
-local Tab = window:Tab({
-    name = "Settings",
-    icon = "http://www.roblox.com/asset/?id=6031280882"
-})
+            local Tab = window:Tab({
+                name = "Settings",
+                icon = "http://www.roblox.com/asset/?id=6031280882"
+            })
 
             local Section = Tab:Section({Name = "Main", Side = "Left"})
             ConfigHolder = Section:Dropdown({Name = "Configs", Options = {"Report", "This", "Error", "To", "Finobe"}, Callback = function(option) if Text then Text.Set(option) end end, Flag = "config_Name_list"}); Library:UpdateConfigList()
@@ -3008,5 +3046,3 @@ local Tab = window:Tab({
         end
 
 return Library, Flags
-
-print("anana")
