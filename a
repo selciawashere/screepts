@@ -922,7 +922,6 @@ end
                 Cfg.Set()
             end
 
-            -- Mouse or tap to open the UI
             Items.Button.MouseButton1Click:Connect(function()
                 Cfg.Open = not Cfg.Open
                 Cfg.SetVisible(Cfg.Open)            
@@ -934,7 +933,6 @@ end
                 end)
             end
 
-            -- Respond to mouse drag and mobile touch Pan
             InputService.InputChanged:Connect(function(input)
                 if (DraggingSat or DraggingHue or DraggingAlpha) and 
                     (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
@@ -942,7 +940,6 @@ end
                 end
             end)
 
-            -- Reset dragging on mouseup or touch ended
             Library:Connection(InputService.InputEnded, function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     DraggingSat = false
@@ -956,7 +953,6 @@ end
                 end
             end)    
 
-            -- For tapping/clicking outside to close on mobile or desktop
             Library:Connection(InputService.InputBegan, function(input, game_event)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     if not Library:Hovering({Items.Button, Items.Window}) then
@@ -967,10 +963,9 @@ end
             end)
 
             local function assign_input_handlers(UIElement, drag_var_name)
-                -- Handle both mouse & touch for all pickers
                 if UIElement.MouseButton1Down then
                     UIElement.MouseButton1Down:Connect(function()
-                        _G[drag_var_name] = false -- Just in case
+                        _G[drag_var_name] = false 
                         _G[drag_var_name] = true
                     end)
                 end
@@ -1945,13 +1940,29 @@ end
                 Flags[Cfg.Flag] = Cfg.Value
                 Cfg.Callback(Flags[Cfg.Flag])
             end
+
+            local function GetPointerInsideOutline(input)
+                -- works for both mouse and touch
+                local pos = input.Position
+                local abs = Items.Outline.AbsolutePosition
+                local size = Items.Outline.AbsoluteSize
+                return pos.X >= abs.X and pos.X <= abs.X + size.X
+            end
             
             Items.Outline.MouseButton1Down:Connect(function()
                 Cfg.Dragging = true 
             end)
 
+            -- Touch support: begin dragging when touching slider
+            Items.Outline.TouchTap:Connect(function()
+                Cfg.Dragging = true
+            end)
+
             Library:Connection(InputService.InputChanged, function(input)
-                if Cfg.Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then 
+                if Cfg.Dragging and (
+                    input.UserInputType == Enum.UserInputType.MouseMovement
+                    or input.UserInputType == Enum.UserInputType.Touch
+                ) then 
                     local Size = (input.Position.X - Items.Outline.AbsolutePosition.X) / Items.Outline.AbsoluteSize.X
                     local Value = ((Cfg.Max - Cfg.Min) * Size) + Cfg.Min
                     Cfg.Set(Value)
@@ -1959,10 +1970,12 @@ end
             end)
 
             Library:Connection(InputService.InputEnded, function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
                     Cfg.Dragging = false
                 end 
             end)
+
 
             Cfg.Set(Cfg.Value)
             ConfigFlags[Cfg.Flag] = Cfg.Set
