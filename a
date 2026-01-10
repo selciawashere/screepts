@@ -1141,25 +1141,27 @@ end
                 TabInfo;
                 Items = {};
             }
-            
-            Library.Items = Library:Create( "ScreenGui" , {
+
+            Library.Items = Library:Create("ScreenGui", {
                 Parent = CoreGui;
                 Name = "\0";
                 Enabled = true;
                 ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
                 IgnoreGuiInset = true;
-            });
-            
-            Library.Other = Library:Create( "ScreenGui" , {
+                ResetOnSpawn = false; -- helpful for mobile
+            })
+
+            Library.Other = Library:Create("ScreenGui", {
                 Parent = CoreGui;
                 Name = "\0";
                 Enabled = false;
                 ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
                 IgnoreGuiInset = true;
-            }); 
+                ResetOnSpawn = false;
+            })
 
             local Items = Cfg.Items; do
-                Items.Window = Library:Create( "Frame" , {
+                Items.Window = Library:Create("Frame", {
                     Parent = Library.Items;
                     Name = "\0";
                     Position = dim2(0.5, -Cfg.Size.X.Offset / 2, 0.5, -Cfg.Size.Y.Offset / 2);
@@ -1168,8 +1170,8 @@ end
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(0, 0, 0)
                 }); Items.Window.Position = dim2(0, Items.Window.AbsolutePosition.X, 0, Items.Window.AbsolutePosition.Y); Library:Themify(Items.Window, "window_outline", "BackgroundColor3");
-                
-                Items.Outline = Library:Create( "Frame" , {
+
+                Items.Outline = Library:Create("Frame", {
                     Parent = Items.Window;
                     Name = "\0";
                     Size = dim2(1, 0, 1, 0);
@@ -1178,8 +1180,8 @@ end
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(0, 0, 0)
                 }); Library:Themify(Items.Outline, "window_outline", "BackgroundColor3")
-                
-                Items.Inline = Library:Create( "Frame" , {
+
+                Items.Inline = Library:Create("Frame", {
                     Parent = Items.Outline;
                     Name = "\0";
                     Position = dim2(0, 1, 0, 1);
@@ -1187,9 +1189,9 @@ end
                     Size = dim2(1, -2, 1, -2);
                     BorderSizePixel = 0;
                     BackgroundColor3 = themes.preset.inline
-                });	Library:Themify(Items.Inline, "inline", "BackgroundColor3")
-                
-                Items.TabHolderFrame = Library:Create( "Frame" , {
+                }); Library:Themify(Items.Inline, "inline", "BackgroundColor3")
+
+                Items.TabHolderFrame = Library:Create("Frame", {
                     Parent = Items.Inline;
                     Name = "\0";
                     Position = dim2(0, 1, 0, 1);
@@ -1198,8 +1200,8 @@ end
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(12, 14, 14)
                 });
-                
-                Items.Filler = Library:Create( "Frame" , {
+
+                Items.Filler = Library:Create("Frame", {
                     Parent = Items.TabHolderFrame;
                     Name = "\0";
                     Position = dim2(1, -1, 0, 0);
@@ -1207,9 +1209,9 @@ end
                     Size = dim2(0, 1, 1, 0);
                     BorderSizePixel = 0;
                     BackgroundColor3 = themes.preset.inline
-                });	Library:Themify(Items.Filler, "inline", "BackgroundColor3")
-                
-                Items.TabHolder = Library:Create( "Frame" , {
+                }); Library:Themify(Items.Filler, "inline", "BackgroundColor3")
+
+                Items.TabHolder = Library:Create("Frame", {
                     Parent = Items.TabHolderFrame;
                     BackgroundTransparency = 1;
                     Name = "\0";
@@ -1217,20 +1219,20 @@ end
                     Size = dim2(1, 0, 1, 0);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
-                });	
-                
-                Library:Create( "UIListLayout" , {
+                });
+
+                Library:Create("UIListLayout", {
                     Parent = Items.TabHolder;
                     Padding = dim(0, 6);
                     SortOrder = Enum.SortOrder.LayoutOrder
                 });
-                
-                Library:Create( "UIPadding" , {
+
+                Library:Create("UIPadding", {
                     Parent = Items.TabHolder;
                     PaddingTop = dim(0, 6)
                 });
-                
-                Items.PageHolder = Library:Create( "Frame" , {
+
+                Items.PageHolder = Library:Create("Frame", {
                     Parent = Items.Inline;
                     Name = "\0";
                     Position = dim2(0, 140, 0, 1);
@@ -1238,9 +1240,9 @@ end
                     Size = dim2(1, -141, 1, -2);
                     BorderSizePixel = 0;
                     BackgroundColor3 = themes.preset.background
-                });	Library:Themify(Items.PageHolder, "background", "BackgroundColor3")
-                
-                Items.TitleHolder = Library:Create( "Frame" , {
+                }); Library:Themify(Items.PageHolder, "background", "BackgroundColor3")
+
+                Items.TitleHolder = Library:Create("Frame", {
                     Parent = Items.PageHolder;
                     BackgroundTransparency = 1;
                     Name = "\0";
@@ -1248,9 +1250,9 @@ end
                     Size = dim2(1, 0, 0, 43);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
-                });	
-                
-                Items.Filler = Library:Create( "Frame" , {
+                });
+
+                Items.Filler = Library:Create("Frame", {
                     Parent = Items.TitleHolder;
                     Name = "\0";
                     Position = dim2(0, 0, 1, -1);
@@ -1258,9 +1260,9 @@ end
                     Size = dim2(1, 0, 0, 1);
                     BorderSizePixel = 0;
                     BackgroundColor3 = themes.preset.inline
-                });	Library:Themify(Items.Filler, "inline", "BackgroundColor3")
-                
-                Items.SectionTitle = Library:Create( "TextLabel" , {
+                }); Library:Themify(Items.Filler, "inline", "BackgroundColor3")
+
+                Items.SectionTitle = Library:Create("TextLabel", {
                     RichText = true;
                     Parent = Items.TitleHolder;
                     TextColor3 = themes.preset.accent;
@@ -1277,14 +1279,14 @@ end
                     TextSize = 20;
                     BackgroundColor3 = rgb(255, 255, 255)
                 }); Library:Themify(Items.SectionTitle, "accent", "TextColor3")
-                
-                Library:Create( "UIPadding" , {
+
+                Library:Create("UIPadding", {
                     Parent = Items.SectionTitle;
                     PaddingRight = dim(0, 8);
                     PaddingLeft = dim(0, 13)
                 });
-                
-                Items.Pages = Library:Create( "Frame" , {
+
+                Items.Pages = Library:Create("Frame", {
                     Parent = Items.PageHolder;
                     Name = "\0";
                     BackgroundTransparency = 1;
@@ -1293,9 +1295,9 @@ end
                     Size = dim2(1, 0, 1, -43);
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(255, 255, 255)
-                });	
+                });
 
-                Items.Fade = Library:Create( "Frame" , {
+                Items.Fade = Library:Create("Frame", {
                     Name = "\0";
                     BackgroundTransparency = 1;
                     Parent = Items.Pages;
@@ -1304,9 +1306,9 @@ end
                     BorderSizePixel = 0;
                     BackgroundColor3 = rgb(17, 19, 19);
                     ZIndex = 2;
-                });	Library:Themify(Items.Fade, "background", "BackgroundColor3")                
-                
-                Items.Glow = Library:Create( "ImageLabel" , {
+                }); Library:Themify(Items.Fade, "background", "BackgroundColor3")
+
+                Items.Glow = Library:Create("ImageLabel", {
                     ImageColor3 = rgb(255, 0, 0);
                     ScaleType = Enum.ScaleType.Slice;
                     ImageTransparency = 0.6499999761581421;
@@ -1320,13 +1322,62 @@ end
                     BackgroundColor3 = rgb(255, 255, 255);
                     BorderSizePixel = 0;
                     SliceCenter = rect(vec2(21, 21), vec2(79, 79))
-                });	Library:Themify(Items.Glow, "glow", "ImageColor3")                
+                }); Library:Themify(Items.Glow, "glow", "ImageColor3")
             end
 
-            do -- Other
-                Library:Draggify(Items.Window)
+            -- BEGIN: Enhanced drag/move for Desktop & Mobile
+            do
+                local UIS = game:GetService("UserInputService")
+                local Camera = workspace.CurrentCamera
+                local Dragging, DragInput, DragStart, StartPos
+                -- Make sure to allow both mouse and touch
+                local function update(input)
+                    local delta
+                    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+                        if UIS.TouchEnabled and input.Position then
+                            delta = input.Position - DragStart
+                        elseif not UIS.TouchEnabled then
+                            delta = input.Position - DragStart
+                        else
+                            return
+                        end
+                        local viewport = Camera.ViewportSize
+                        local newX = math.clamp(StartPos.X.Offset + delta.X, 0, viewport.X - Items.Window.AbsoluteSize.X)
+                        local newY = math.clamp(StartPos.Y.Offset + delta.Y, 0, viewport.Y - Items.Window.AbsoluteSize.Y)
+                        Items.Window.Position = UDim2.new(0, newX, 0, newY)
+                    end
+                end
+
+                Items.Window.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        Dragging = true
+                        DragStart = input.Position
+                        StartPos = Items.Window.Position
+                        DragInput = input
+                        input.Changed:Connect(function()
+                            if input.UserInputState == Enum.UserInputState.End then
+                                Dragging = false
+                            end
+                        end)
+                    end
+                end)
+
+                Items.Window.InputChanged:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                        DragInput = input
+                    end
+                end)
+
+                UIS.InputChanged:Connect(function(input)
+                    if Dragging and input == DragInput then
+                        update(input)
+                    end
+                end)
+
+                -- Optionally also enable resizify (not altered)
                 Library:Resizify(Items.Window)
             end
+            -- END: Enhanced drag/move for Desktop & Mobile
 
             function Cfg.ToggleMenu(bool) 
                 if Cfg.Tweening then 
