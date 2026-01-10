@@ -307,22 +307,11 @@ end
                 if not Dragging then return end
                 if input.UserInputType ~= Enum.UserInputType.MouseMovement
                 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        
+
                 local delta = input.Position - StartInput
-                local viewport = Camera.ViewportSize
-        
-                local newX = math.clamp(
-                    StartPos.X.Offset + delta.X,
-                    0,
-                    viewport.X - Parent.AbsoluteSize.X
-                )
-        
-                local newY = math.clamp(
-                    StartPos.Y.Offset + delta.Y,
-                    0,
-                    viewport.Y - Parent.AbsoluteSize.Y
-                )
-        
+                local newX = StartPos.X.Offset + delta.X
+                local newY = StartPos.Y.Offset + delta.Y
+
                 Parent.Position = UDim2.new(0, newX, 0, newY)
             end)
 
