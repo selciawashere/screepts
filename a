@@ -1,6 +1,4 @@
-if getgenv().Loaded then 
-    getgenv().Library:Unload()
-end 
+
 
 getgenv().Loaded = true 
 
