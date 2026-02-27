@@ -1,0 +1,293 @@
+--[[
+    Galaxy Popup GUI (Neon Green Glass Edition)
+    Theme: Neon Green Gradient + Transparent
+    Status: BUGS FIXED (Debounce + Clean Exit + Custom Text)
+]]
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+--// Configuration
+local CONFIG = {
+    Title = "Galaxy",
+    Header = "Join Galaxy Discord Server!",
+    Description = "The main server of Ronix Hub aka the developer of this script",
+    DiscordLink = "https://discord.gg/BU6CejtVMd", 
+    ThemeColor = Color3.fromRGB(80, 255, 80), -- Neon Green Text for contrast
+    GradientColors = ColorSequence.new{
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(0, 255, 120)),    -- Bright Neon Green (Top Left)
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(0, 20, 10))       -- Dark Green/Black (Bottom Right)
+    }
+}
+
+--// Protect GUI
+local function ProtectGui(gui)
+    if syn and syn.protect_gui then
+        syn.protect_gui(gui)
+        gui.Parent = CoreGui
+    elseif gethui then
+        gui.Parent = gethui()
+    else
+        gui.Parent = CoreGui
+    end
+end
+
+--// Create Main GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "Galaxy_Neon_Glass"
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ProtectGui(ScreenGui)
+
+--// Main Container
+local Container = Instance.new("Frame")
+Container.Name = "GlassCard"
+Container.Parent = ScreenGui
+Container.BackgroundColor3 = Color3.fromRGB(255, 255, 255) -- Base white for Gradient to apply correctly
+Container.BackgroundTransparency = 0.15 -- Slight transparency
+Container.BorderSizePixel = 0
+Container.AnchorPoint = Vector2.new(0.5, 0.5)
+Container.Position = UDim2.new(0.5, 0, 0.5, 0)
+Container.Size = UDim2.new(0, 0, 0, 0) -- Start small
+Container.ClipsDescendants = false
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = Container
+
+--// Neon Green Gradient
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = CONFIG.GradientColors
+UIGradient.Rotation = 45
+UIGradient.Parent = Container
+
+--// Subtle Edge Stroke
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Parent = Container
+UIStroke.Color = Color3.fromRGB(80, 255, 80) -- Neon Green tint on border
+UIStroke.Thickness = 1
+UIStroke.Transparency = 0.3
+
+--// Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = Container
+CloseButton.BackgroundTransparency = 1
+CloseButton.Position = UDim2.new(1, -35, 0, 10)
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Font = Enum.Font.GothamMedium
+CloseButton.Text = "×" 
+CloseButton.TextColor3 = Color3.fromRGB(180, 255, 200)
+CloseButton.TextSize = 24
+CloseButton.ZIndex = 5
+
+--// Title Text
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Parent = Container
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.new(0, 25, 0, 20)
+Title.Size = UDim2.new(1, -50, 0, 20)
+Title.Font = Enum.Font.GothamBold
+Title.Text = CONFIG.Title
+Title.TextColor3 = Color3.fromRGB(80, 255, 120)
+Title.TextSize = 20
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+--// Header (Subtext)
+local Header = Instance.new("TextLabel")
+Header.Name = "Header"
+Header.Parent = Container
+Header.BackgroundTransparency = 1
+Header.Position = UDim2.new(0, 25, 0, 45)
+Header.Size = UDim2.new(1, -50, 0, 15)
+Header.Font = Enum.Font.GothamMedium
+Header.Text = CONFIG.Header
+Header.TextColor3 = Color3.fromRGB(120, 255, 160) -- Light Neon Green
+Header.TextSize = 11
+Header.TextXAlignment = Enum.TextXAlignment.Left
+
+--// Description
+local Description = Instance.new("TextLabel")
+Description.Name = "Description"
+Description.Parent = Container
+Description.BackgroundTransparency = 1
+Description.Position = UDim2.new(0, 25, 0, 75)
+Description.Size = UDim2.new(1, -50, 0, 40)
+Description.Font = Enum.Font.Gotham
+Description.Text = "" 
+Description.TextColor3 = Color3.fromRGB(180, 255, 220)
+Description.TextSize = 14
+Description.TextWrapped = true
+Description.TextXAlignment = Enum.TextXAlignment.Left
+Description.TextYAlignment = Enum.TextYAlignment.Top
+
+--// Copy Button (Glass Style)
+local CopyButton = Instance.new("TextButton")
+CopyButton.Name = "CopyButton"
+CopyButton.Parent = Container
+CopyButton.BackgroundColor3 = Color3.fromRGB(40, 255, 100)
+CopyButton.BackgroundTransparency = 0.8 
+CopyButton.Position = UDim2.new(0, 25, 1, -55)
+CopyButton.Size = UDim2.new(1, -50, 0, 32)
+CopyButton.Font = Enum.Font.GothamBold
+CopyButton.Text = "Copy Invite Link"
+CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyButton.TextSize = 13
+CopyButton.AutoButtonColor = false
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = CopyButton
+
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Parent = CopyButton
+BtnStroke.Color = Color3.fromRGB(80, 255, 80)
+BtnStroke.Thickness = 1
+BtnStroke.Transparency = 0.6
+
+--// FUNCTION: Draggable (PC & Mobile)
+local function MakeDraggable(frame)
+    local dragToggle, dragInput, dragStart, startPos
+    local dragSpeed = 0.20
+    
+    local function updateInput(input)
+        local Delta = input.Position - dragStart
+        local Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + Delta.X, startPos.Y.Scale, startPos.Y.Offset + Delta.Y)
+        TweenService:Create(frame, TweenInfo.new(dragSpeed), {Position = Position}):Play()
+    end
+    
+    frame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then
+            updateInput(input)
+        end
+    end)
+end
+
+MakeDraggable(Container)
+
+--// FUNCTION: Typewriter Effect
+local function Typewrite(label, text)
+    for i = 1, #text do
+        if not label.Parent then break end
+        label.Text = string.sub(text, 1, i)
+        task.wait(0.02)
+    end
+end
+
+--// Logic & Interactions
+CloseButton.MouseEnter:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(80, 255, 120)}):Play()
+end)
+CloseButton.MouseLeave:Connect(function()
+    TweenService:Create(CloseButton, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(180, 255, 200)}):Play()
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    -- FIX: Proper Exit Animation (Fade out all children)
+    local exitInfo = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.In)
+    
+    -- Fade out the container
+    TweenService:Create(Container, exitInfo, {
+        Size = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1
+    }):Play()
+    
+    TweenService:Create(UIStroke, exitInfo, {Transparency = 1}):Play()
+    
+    -- Fade out all text and buttons so they don't float
+    for _, child in pairs(Container:GetDescendants()) do
+        if child:IsA("TextLabel") or child:IsA("TextButton") then
+            TweenService:Create(child, exitInfo, {TextTransparency = 1}):Play()
+        end
+        if child:IsA("GuiObject") then
+             TweenService:Create(child, exitInfo, {BackgroundTransparency = 1}):Play()
+        end
+        if child:IsA("UIStroke") then
+            TweenService:Create(child, exitInfo, {Transparency = 1}):Play()
+        end
+    end
+    
+    task.wait(0.3)
+    ScreenGui:Destroy()
+end)
+
+CopyButton.MouseEnter:Connect(function()
+    TweenService:Create(CopyButton, TweenInfo.new(0.3), {BackgroundTransparency = 0.7}):Play()
+    TweenService:Create(BtnStroke, TweenInfo.new(0.3), {Transparency = 0.35}):Play()
+end)
+
+CopyButton.MouseLeave:Connect(function()
+    TweenService:Create(CopyButton, TweenInfo.new(0.3), {BackgroundTransparency = 0.8}):Play()
+    TweenService:Create(BtnStroke, TweenInfo.new(0.3), {Transparency = 0.6}):Play()
+end)
+
+local isCopying = false -- Debounce variable
+CopyButton.MouseButton1Click:Connect(function()
+    if isCopying then return end -- Prevent double clicks
+    
+    if setclipboard then
+        isCopying = true
+        setclipboard(CONFIG.DiscordLink)
+        
+        -- FIX: Prevent text overwriting bug
+        local originalText = "Copy Invite Link"
+        CopyButton.Text = "Copied!"
+        
+        TweenService:Create(CopyButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(40, 255, 100), 
+            BackgroundTransparency = 0.6, 
+            TextColor3 = Color3.fromRGB(255, 255, 255)
+        }):Play()
+        
+        task.wait(1.5)
+        
+        if CopyButton.Parent then
+            CopyButton.Text = originalText
+            TweenService:Create(CopyButton, TweenInfo.new(0.3), {
+                BackgroundColor3 = Color3.fromRGB(40, 255, 100), 
+                BackgroundTransparency = 0.8, 
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }):Play()
+        end
+        isCopying = false
+    end
+end)
+
+--// Entrance Animation
+local function OpenGui()
+    local TargetSize = UDim2.new(0, 340, 0, 200)
+    
+    local Sound = Instance.new("Sound")
+    Sound.SoundId = "rbxassetid://6895079853" 
+    Sound.Volume = 0.5
+    Sound.Parent = Container
+    Sound:Play()
+    
+    local TweenIn = TweenService:Create(Container, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = TargetSize})
+    TweenIn:Play()
+    
+    task.wait(0.3)
+    Typewrite(Description, CONFIG.Description)
+end
+
+OpenGui()
