@@ -10087,7 +10087,6 @@ spawn(function()
             end
         end
     end
-	end)
 
 function IsPrehistoricIslandActive()
     for _, v in pairs(game:GetService("Workspace")["_WorldOrigin"].Locations:GetChildren()) do
@@ -10115,22 +10114,17 @@ function IsKitsuneIslandActive()
     end
     return false
 end
-
+end
 
 function UpdateBerriesESPColored()
     local CollectionService = game:GetService("CollectionService")
-    local Players = game:GetService("Players")
     local BerryBushes = CollectionService:GetTagged("BerryBush")
-
     for _, Bush in pairs(BerryBushes) do
         pcall(function()
-
             for AttributeName, Berry in pairs(Bush:GetAttributes()) do
                 if Berry then
-
-                    -- Create ESP if it doesn't exist
                     if not Bush.Parent:FindFirstChild("BerryESP") then
-                        local bill = Instance.new("BillboardGui")
+                        local bill = Instance.new("BillboardGui", Bush.Parent)
                         bill.Name = "BerryESP"
                         bill.ExtentsOffset = Vector3.new(0, 2.1, 0)
                         bill.Size = UDim2.new(0, 110, 0, 27)
@@ -10138,10 +10132,7 @@ function UpdateBerriesESPColored()
                         bill.AlwaysOnTop = true
                         bill.MaxDistance = 880
                         bill.LightInfluence = 0
-                        bill.Parent = Bush.Parent
-
-                        local name = Instance.new("TextLabel")
-                        name.Name = "TextLabel"
+                        local name = Instance.new("TextLabel", bill)
                         name.Font = Enum.Font.FredokaOne
                         name.TextSize = 13
                         name.TextWrapped = true
@@ -10152,8 +10143,6 @@ function UpdateBerriesESPColored()
                         name.BorderSizePixel = 0
                         name.TextStrokeTransparency = 0.12
                         name.TextStrokeColor3 = Color3.fromRGB(218, 255, 86)
-                        name.Parent = bill
-
                         local berryColors = {
                             ["Blue"] = Color3.fromRGB(70, 133, 255),
                             ["Yellow"] = Color3.fromRGB(255, 253, 98),
@@ -10161,58 +10150,48 @@ function UpdateBerriesESPColored()
                             ["Green"] = Color3.fromRGB(74, 230, 119),
                             ["Pink"] = Color3.fromRGB(255, 138, 243),
                         }
-
-                        local colorFound
+                        local colorFound = nil
                         for k, c in pairs(berryColors) do
-                            if string.find(string.lower(tostring(Berry)), string.lower(k)) then
+                            if string.find(string.lower(Berry), string.lower(k)) then
                                 colorFound = c
                                 break
                             end
                         end
-
                         name.TextColor3 = colorFound or Color3.fromRGB(226, 255, 97)
-                        name.Text = tostring(Berry)
+                        name.Text = Berry
                     end
-
-                    -- Update distance
-                    local Player = Players.LocalPlayer
+                    local Player = game:GetService("Players").LocalPlayer
                     if Player and Player.Character and Player.Character:FindFirstChild("Head") then
                         local Position = Player.Character.Head.Position
                         local Magnitude = (Bush.Parent:GetPivot().Position - Position).Magnitude
-
-                        local colorCode = "Unknown"
-                        for _, key in pairs({"Blue","Yellow","Red","Green","Pink"}) do
-                            if string.find(string.lower(tostring(Berry)), string.lower(key)) then
+                        local colorCode = "unknown"
+                        local berryColors = {
+                            ["Blue"] = "Blue",
+                            ["Yellow"] = "Yellow",
+                            ["Red"] = "Red",
+                            ["Green"] = "Green",
+                            ["Pink"] = "Pink",
+                        }
+                        for key, code in pairs(berryColors) do
+                            if string.find(string.lower(Berry), string.lower(key)) then
                                 colorCode = key
                                 break
                             end
                         end
-
-                        rconsoleinfo("[AtherHub BerryESP] Found Berry: " 
-                            .. tostring(Berry) 
-                            .. " [Color: " .. colorCode .. "]")
-
-                        local esp = Bush.Parent:FindFirstChild("BerryESP")
-                        if esp and esp:FindFirstChild("TextLabel") then
-                            esp.TextLabel.Text = string.format(
-                                "🍇 %s\n%.0fm",
-                                tostring(Berry),
-                                math.floor(Magnitude / 3)
-                            )
-                        end
+                        rconsoleinfo("[AtherHub BerryESP] Found Berry: " .. tostring(Berry) .. " [Color: " .. colorCode .. "]")
+                        Bush.Parent.BerryESP.TextLabel.Text = string.format("🍇 %s\n%.0fm", Berry, math.floor(Magnitude / 3))
                     end
-
                 else
-                    local esp = Bush.Parent:FindFirstChild("BerryESP")
-                    if esp then
-                        esp:Destroy()
+                    if Bush.Parent:FindFirstChild("NameEsp") then
+                        Bush.Parent:FindFirstChild("NameEsp"):Destroy()
                     end
                 end
             end
-
         end)
     end
 end
+end)
+
 
 local SettingsPage = MainWindow:CreateSettingsPage()
 SettingsPage:CreateConfigsSection()
