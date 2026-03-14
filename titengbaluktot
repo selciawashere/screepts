@@ -1,0 +1,575 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local FRAME_WIDTH = 252
+local HEADER_HEIGHT = 48
+local MINIMIZED_HEIGHT = 56
+local PC_HEIGHT = 174
+local MOBILE_HEIGHT = 212
+
+local targetPlayer = nil
+local clickInterval = 0.10
+local isLeftMouseDown = false
+local isRightMouseDown = false
+local autoClickConnection = nil
+local isEnabled = false
+local isMinimized = false
+local lastClickTime = 0
+local lastTouchPosition = nil
+local isDraggingFrame = false
+local dragInput = nil
+local dragStart = nil
+local frameStartPosition = nil
+
+local existingGui = game.CoreGui:FindFirstChild("SilentAimStatus")
+if existingGui then
+    existingGui:Destroy()
+end
+
+local function isMobileMode()
+    local lastInputType = UserInputService:GetLastInputType()
+    local usingTouchNow = lastInputType == Enum.UserInputType.Touch
+    local touchOnlyDevice = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
+    return touchOnlyDevice or (UserInputService.TouchEnabled and usingTouchNow)
+end
+
+local function isLobbyVisible()
+    local playerGui = localPlayer:FindFirstChildOfClass("PlayerGui")
+    local mainGui = playerGui and playerGui:FindFirstChild("MainGui")
+    local mainFrame = mainGui and mainGui:FindFirstChild("MainFrame")
+    local lobby = mainFrame and mainFrame:FindFirstChild("Lobby")
+    local currency = lobby and lobby:FindFirstChild("Currency")
+    return currency and currency.Visible or false
+end
+
+local function stopAutoClick()
+    if autoClickConnection then
+        autoClickConnection:Disconnect()
+        autoClickConnection = nil
+    end
+end
+
+local function isPointInsideGuiObject(point, guiObject)
+    local absolutePosition = guiObject.AbsolutePosition
+    local absoluteSize = guiObject.AbsoluteSize
+
+    return point.X >= absolutePosition.X
+        and point.X <= absolutePosition.X + absoluteSize.X
+        and point.Y >= absolutePosition.Y
+        and point.Y <= absolutePosition.Y + absoluteSize.Y
+end
+
+local function getFrameHeight()
+    if isMinimized then
+        return MINIMIZED_HEIGHT
+    end
+
+    if isMobileMode() then
+        return MOBILE_HEIGHT
+    end
+
+    return PC_HEIGHT
+end
+
+local statusGui = Instance.new("ScreenGui")
+statusGui.Name = "SilentAimStatus"
+statusGui.ResetOnSpawn = false
+statusGui.IgnoreGuiInset = true
+statusGui.DisplayOrder = 999
+statusGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+statusGui.Parent = game.CoreGui
+
+local statusFrame = Instance.new("Frame")
+statusFrame.Size = UDim2.new(0, FRAME_WIDTH, 0, getFrameHeight())
+statusFrame.Position = UDim2.new(0, 16, 0, 16)
+statusFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 30)
+statusFrame.BorderSizePixel = 0
+statusFrame.ClipsDescendants = true
+statusFrame.Parent = statusGui
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 16)
+frameCorner.Parent = statusFrame
+
+local frameStroke = Instance.new("UIStroke")
+frameStroke.Color = Color3.fromRGB(80, 113, 255)
+frameStroke.Transparency = 0.15
+frameStroke.Thickness = 1.5
+frameStroke.Parent = statusFrame
+
+local frameGradient = Instance.new("UIGradient")
+frameGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 39, 59)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(16, 19, 29))
+})
+frameGradient.Rotation = 135
+frameGradient.Parent = statusFrame
+
+local headerFrame = Instance.new("Frame")
+headerFrame.Size = UDim2.new(1, 0, 0, HEADER_HEIGHT)
+headerFrame.BackgroundTransparency = 1
+headerFrame.Parent = statusFrame
+
+local dragHandle = Instance.new("TextButton")
+dragHandle.Size = UDim2.new(1, -160, 0, 28)
+dragHandle.Position = UDim2.new(0, 12, 0, 10)
+dragHandle.BackgroundTransparency = 1
+dragHandle.AutoButtonColor = false
+dragHandle.Text = "SILENT AIM"
+dragHandle.TextColor3 = Color3.fromRGB(245, 247, 255)
+dragHandle.TextSize = 18
+dragHandle.TextXAlignment = Enum.TextXAlignment.Left
+dragHandle.Font = Enum.Font.GothamBold
+dragHandle.Parent = headerFrame
+
+local rightControls = Instance.new("Frame")
+rightControls.Size = UDim2.new(0, 144, 0, 28)
+rightControls.Position = UDim2.new(1, -156, 0, 10)
+rightControls.BackgroundTransparency = 1
+rightControls.Parent = headerFrame
+
+local rightLayout = Instance.new("UIListLayout")
+rightLayout.FillDirection = Enum.FillDirection.Horizontal
+rightLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+rightLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+rightLayout.Padding = UDim.new(0, 6)
+rightLayout.Parent = rightControls
+
+local modeChip = Instance.new("TextLabel")
+modeChip.Size = UDim2.new(0, 58, 0, 28)
+modeChip.BackgroundColor3 = Color3.fromRGB(32, 37, 54)
+modeChip.Text = "PC"
+modeChip.TextColor3 = Color3.fromRGB(255, 210, 96)
+modeChip.TextSize = 12
+modeChip.Font = Enum.Font.GothamBold
+modeChip.Parent = rightControls
+
+local modeChipCorner = Instance.new("UICorner")
+modeChipCorner.CornerRadius = UDim.new(1, 0)
+modeChipCorner.Parent = modeChip
+
+local statusButton = Instance.new("TextButton")
+statusButton.Size = UDim2.new(0, 46, 0, 28)
+statusButton.BackgroundColor3 = Color3.fromRGB(216, 77, 77)
+statusButton.AutoButtonColor = false
+statusButton.Text = "OFF"
+statusButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusButton.TextSize = 12
+statusButton.Font = Enum.Font.GothamBold
+statusButton.Parent = rightControls
+
+local statusButtonCorner = Instance.new("UICorner")
+statusButtonCorner.CornerRadius = UDim.new(1, 0)
+statusButtonCorner.Parent = statusButton
+
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 28, 0, 28)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(45, 51, 72)
+minimizeButton.AutoButtonColor = false
+minimizeButton.Text = "-"
+minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeButton.TextSize = 16
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.Parent = rightControls
+
+local minimizeCorner = Instance.new("UICorner")
+minimizeCorner.CornerRadius = UDim.new(1, 0)
+minimizeCorner.Parent = minimizeButton
+
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(1, -24, 0, 1)
+divider.Position = UDim2.new(0, 12, 0, HEADER_HEIGHT)
+divider.BackgroundColor3 = Color3.fromRGB(62, 70, 99)
+divider.BackgroundTransparency = 0.35
+divider.BorderSizePixel = 0
+divider.Parent = statusFrame
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Size = UDim2.new(1, 0, 1, -HEADER_HEIGHT)
+contentFrame.Position = UDim2.new(0, 0, 0, HEADER_HEIGHT)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Parent = statusFrame
+
+local modeLabel = Instance.new("TextLabel")
+modeLabel.Size = UDim2.new(1, -24, 0, 20)
+modeLabel.Position = UDim2.new(0, 12, 0, 10)
+modeLabel.BackgroundTransparency = 1
+modeLabel.Text = "PC MODE ACTIVE"
+modeLabel.TextColor3 = Color3.fromRGB(228, 232, 245)
+modeLabel.TextSize = 15
+modeLabel.TextXAlignment = Enum.TextXAlignment.Left
+modeLabel.Font = Enum.Font.GothamBold
+modeLabel.Parent = contentFrame
+
+local targetLabel = Instance.new("TextLabel")
+targetLabel.Size = UDim2.new(1, -24, 0, 18)
+targetLabel.Position = UDim2.new(0, 12, 0, 38)
+targetLabel.BackgroundTransparency = 1
+targetLabel.Text = "Target: None"
+targetLabel.TextColor3 = Color3.fromRGB(210, 216, 235)
+targetLabel.TextSize = 14
+targetLabel.TextXAlignment = Enum.TextXAlignment.Left
+targetLabel.Font = Enum.Font.Gotham
+targetLabel.Parent = contentFrame
+
+local aimPointLabel = Instance.new("TextLabel")
+aimPointLabel.Size = UDim2.new(1, -24, 0, 18)
+aimPointLabel.Position = UDim2.new(0, 12, 0, 60)
+aimPointLabel.BackgroundTransparency = 1
+aimPointLabel.Text = "Aim Point: Mouse Cursor"
+aimPointLabel.TextColor3 = Color3.fromRGB(170, 178, 201)
+aimPointLabel.TextSize = 13
+aimPointLabel.TextXAlignment = Enum.TextXAlignment.Left
+aimPointLabel.Font = Enum.Font.Gotham
+aimPointLabel.Parent = contentFrame
+
+local hintLabel = Instance.new("TextLabel")
+hintLabel.Size = UDim2.new(1, -24, 0, 48)
+hintLabel.Position = UDim2.new(0, 12, 0, 86)
+hintLabel.BackgroundTransparency = 1
+hintLabel.Text = "Press X to toggle silent aim on PC."
+hintLabel.TextColor3 = Color3.fromRGB(104, 214, 165)
+hintLabel.TextSize = 13
+hintLabel.TextWrapped = true
+hintLabel.TextXAlignment = Enum.TextXAlignment.Left
+hintLabel.TextYAlignment = Enum.TextYAlignment.Top
+hintLabel.Font = Enum.Font.GothamMedium
+hintLabel.Parent = contentFrame
+
+local mobileToggle = Instance.new("TextButton")
+mobileToggle.Size = UDim2.new(1, -24, 0, 36)
+mobileToggle.Position = UDim2.new(0, 12, 1, -50)
+mobileToggle.BackgroundColor3 = Color3.fromRGB(53, 119, 255)
+mobileToggle.AutoButtonColor = false
+mobileToggle.Text = "Enable Silent Aim"
+mobileToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+mobileToggle.TextSize = 14
+mobileToggle.Font = Enum.Font.GothamBold
+mobileToggle.Visible = false
+mobileToggle.Parent = contentFrame
+
+local mobileToggleCorner = Instance.new("UICorner")
+mobileToggleCorner.CornerRadius = UDim.new(0, 10)
+mobileToggleCorner.Parent = mobileToggle
+
+local mobileToggleStroke = Instance.new("UIStroke")
+mobileToggleStroke.Color = Color3.fromRGB(124, 163, 255)
+mobileToggleStroke.Transparency = 0.25
+mobileToggleStroke.Parent = mobileToggle
+
+local crosshairOuter = Instance.new("Frame")
+crosshairOuter.Size = UDim2.new(0, 36, 0, 36)
+crosshairOuter.AnchorPoint = Vector2.new(0.5, 0.5)
+crosshairOuter.Position = UDim2.new(0.5, 0, 0.5, 0)
+crosshairOuter.BackgroundColor3 = Color3.fromRGB(65, 138, 255)
+crosshairOuter.BackgroundTransparency = 0.82
+crosshairOuter.BorderSizePixel = 0
+crosshairOuter.Visible = false
+crosshairOuter.Parent = statusGui
+
+local crosshairOuterCorner = Instance.new("UICorner")
+crosshairOuterCorner.CornerRadius = UDim.new(1, 0)
+crosshairOuterCorner.Parent = crosshairOuter
+
+local crosshairOuterStroke = Instance.new("UIStroke")
+crosshairOuterStroke.Color = Color3.fromRGB(109, 214, 255)
+crosshairOuterStroke.Thickness = 1.5
+crosshairOuterStroke.Parent = crosshairOuter
+
+local crosshairInner = Instance.new("Frame")
+crosshairInner.Size = UDim2.new(0, 8, 0, 8)
+crosshairInner.AnchorPoint = Vector2.new(0.5, 0.5)
+crosshairInner.Position = UDim2.new(0.5, 0, 0.5, 0)
+crosshairInner.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+crosshairInner.BorderSizePixel = 0
+crosshairInner.Parent = crosshairOuter
+
+local crosshairInnerCorner = Instance.new("UICorner")
+crosshairInnerCorner.CornerRadius = UDim.new(1, 0)
+crosshairInnerCorner.Parent = crosshairInner
+
+local function updateStatusUI()
+    local mobileMode = isMobileMode()
+
+    statusFrame.Size = UDim2.new(0, FRAME_WIDTH, 0, getFrameHeight())
+    contentFrame.Visible = not isMinimized
+    divider.Visible = not isMinimized
+    minimizeButton.Text = isMinimized and "+" or "-"
+
+    modeChip.Text = mobileMode and "MOBILE" or "PC"
+    modeChip.TextColor3 = mobileMode and Color3.fromRGB(109, 214, 255) or Color3.fromRGB(255, 210, 96)
+    modeChip.BackgroundColor3 = mobileMode and Color3.fromRGB(24, 52, 74) or Color3.fromRGB(52, 43, 22)
+
+    statusButton.Text = isEnabled and "ON" or "OFF"
+    statusButton.BackgroundColor3 = isEnabled and Color3.fromRGB(61, 194, 116) or Color3.fromRGB(216, 77, 77)
+
+    modeLabel.Text = mobileMode and "MOBILE MODE ACTIVE" or "PC MODE ACTIVE"
+    targetLabel.Text = "Target: " .. (targetPlayer and targetPlayer.Name or "None")
+
+    if mobileMode then
+        aimPointLabel.Text = "Aim Point: " .. (lastTouchPosition and "Touch Position" or "Screen Center")
+        hintLabel.Text = "Drag the title bar to move this UI. Tap OFF/ON or the button below to toggle silent aim."
+        hintLabel.TextColor3 = Color3.fromRGB(104, 196, 255)
+    else
+        aimPointLabel.Text = "Aim Point: Mouse Cursor"
+        hintLabel.Text = "Press X to toggle silent aim on PC. You can also drag or minimize this panel."
+        hintLabel.TextColor3 = Color3.fromRGB(104, 214, 165)
+    end
+
+    mobileToggle.Visible = mobileMode and not isMinimized
+    mobileToggle.Text = isEnabled and "Disable Silent Aim" or "Enable Silent Aim"
+    mobileToggle.BackgroundColor3 = isEnabled and Color3.fromRGB(61, 194, 116) or Color3.fromRGB(53, 119, 255)
+
+    crosshairOuter.Visible = mobileMode
+end
+
+local function setEnabled(value)
+    isEnabled = value
+
+    if not isEnabled then
+        targetPlayer = nil
+        isLeftMouseDown = false
+        isRightMouseDown = false
+        stopAutoClick()
+    end
+
+    updateStatusUI()
+end
+
+local function getAimPosition()
+    if isMobileMode() then
+        if lastTouchPosition then
+            return lastTouchPosition
+        end
+
+        local viewportSize = camera.ViewportSize
+        return Vector2.new(viewportSize.X * 0.5, viewportSize.Y * 0.5)
+    end
+
+    return UserInputService:GetMouseLocation()
+end
+
+local function getClosestPlayerToPoint(screenPoint)
+    local closest = nil
+    local minDist = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+            if head and humanoid and humanoid.Health > 0 then
+                local position, onScreen = camera:WorldToViewportPoint(head.Position)
+
+                if onScreen then
+                    local headPoint = Vector2.new(position.X, position.Y)
+                    local distance = (headPoint - screenPoint).Magnitude
+
+                    if distance < minDist then
+                        closest = player
+                        minDist = distance
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+local function lockCameraToHead()
+    if not isEnabled then
+        return
+    end
+
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Head") then
+        local head = targetPlayer.Character.Head
+        local position = camera:WorldToViewportPoint(head.Position)
+
+        if position.Z > 0 then
+            local cameraPosition = camera.CFrame.Position
+            camera.CFrame = CFrame.new(cameraPosition, head.Position)
+        end
+    end
+end
+
+local function autoClick()
+    if not isEnabled then
+        return
+    end
+
+    stopAutoClick()
+
+    autoClickConnection = RunService.Heartbeat:Connect(function()
+        if not isEnabled or not (isLeftMouseDown or isRightMouseDown) then
+            stopAutoClick()
+            return
+        end
+
+        if isLobbyVisible() then
+            return
+        end
+
+        local now = tick()
+        if now - lastClickTime >= clickInterval then
+            if typeof(mouse1click) == "function" then
+                mouse1click()
+            end
+
+            lastClickTime = now
+        end
+    end)
+end
+
+local function beginDrag(input)
+    isDraggingFrame = true
+    dragStart = input.Position
+    frameStartPosition = statusFrame.Position
+    dragInput = input
+
+    input.Changed:Connect(function()
+        if input.UserInputState == Enum.UserInputState.End then
+            isDraggingFrame = false
+            dragInput = nil
+        end
+    end)
+end
+
+local function updateDrag(input)
+    if not dragStart or not frameStartPosition then
+        return
+    end
+
+    local delta = input.Position - dragStart
+    statusFrame.Position = UDim2.new(
+        frameStartPosition.X.Scale,
+        frameStartPosition.X.Offset + delta.X,
+        frameStartPosition.Y.Scale,
+        frameStartPosition.Y.Offset + delta.Y
+    )
+end
+
+local function isInputOnStatusFrame(input)
+    if not input.Position then
+        return false
+    end
+
+    local point = Vector2.new(input.Position.X, input.Position.Y)
+    return isPointInsideGuiObject(point, statusFrame)
+end
+
+dragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        beginDrag(input)
+    end
+end)
+
+dragHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+statusButton.MouseButton1Click:Connect(function()
+    setEnabled(not isEnabled)
+end)
+
+mobileToggle.MouseButton1Click:Connect(function()
+    setEnabled(not isEnabled)
+end)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    updateStatusUI()
+end)
+
+UserInputService.LastInputTypeChanged:Connect(function()
+    updateStatusUI()
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    local onStatusFrame = isInputOnStatusFrame(input)
+
+    if input.UserInputType == Enum.UserInputType.Touch and input.Position and not onStatusFrame and not isDraggingFrame then
+        lastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
+        updateStatusUI()
+    end
+
+    if input.KeyCode == Enum.KeyCode.X and not processed and not isMobileMode() then
+        setEnabled(not isEnabled)
+        return
+    end
+
+    if onStatusFrame or not isEnabled then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not processed then
+        if not isLeftMouseDown then
+            isLeftMouseDown = true
+            autoClick()
+        end
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 and not processed then
+        if not isRightMouseDown then
+            isRightMouseDown = true
+            autoClick()
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDraggingFrame and input == dragInput then
+        updateDrag(input)
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.Touch and input.Position and not isInputOnStatusFrame(input) then
+        lastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
+        updateStatusUI()
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, processed)
+    if input == dragInput then
+        isDraggingFrame = false
+        dragInput = nil
+    end
+
+    if input.UserInputType == Enum.UserInputType.Touch then
+        lastTouchPosition = nil
+        updateStatusUI()
+        return
+    end
+
+    if not isEnabled then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not processed then
+        isLeftMouseDown = false
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 and not processed then
+        isRightMouseDown = false
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    camera = workspace.CurrentCamera
+
+    if not isLobbyVisible() and isEnabled then
+        targetPlayer = getClosestPlayerToPoint(getAimPosition())
+
+        if targetPlayer then
+            lockCameraToHead()
+        end
+    else
+        targetPlayer = nil
+    end
+
+    updateStatusUI()
+end)
+
+updateStatusUI()
