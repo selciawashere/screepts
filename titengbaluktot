@@ -18,6 +18,7 @@ local isRightMouseDown = false
 local autoClickConnection = nil
 local isEnabled = false
 local isMinimized = false
+local teamCheckEnabled = true
 local lastClickTime = 0
 local lastTouchPosition = nil
 local isDraggingFrame = false
@@ -51,6 +52,26 @@ local function stopAutoClick()
         autoClickConnection:Disconnect()
         autoClickConnection = nil
     end
+end
+
+local function isTeammate(player)
+    if not teamCheckEnabled or not player then
+        return false
+    end
+
+    if player == localPlayer then
+        return true
+    end
+
+    if localPlayer.Team and player.Team then
+        return localPlayer.Team == player.Team
+    end
+
+    if localPlayer.Neutral == false and player.Neutral == false then
+        return localPlayer.TeamColor == player.TeamColor
+    end
+
+    return false
 end
 
 local function isPointInsideGuiObject(point, guiObject)
@@ -312,11 +333,11 @@ local function updateStatusUI()
 
     if mobileMode then
         aimPointLabel.Text = "Aim Point: " .. (lastTouchPosition and "Touch Position" or "Screen Center")
-        hintLabel.Text = "Drag the title bar to move this UI. Tap OFF/ON or the button below to toggle silent aim."
+        hintLabel.Text = "Drag the title bar to move this UI. Tap OFF/ON or the button below to toggle silent aim. Team check is ON."
         hintLabel.TextColor3 = Color3.fromRGB(104, 196, 255)
     else
         aimPointLabel.Text = "Aim Point: Mouse Cursor"
-        hintLabel.Text = "Press X to toggle silent aim on PC. You can also drag or minimize this panel."
+        hintLabel.Text = "Press X to toggle silent aim on PC. You can also drag or minimize this panel. Team check is ON."
         hintLabel.TextColor3 = Color3.fromRGB(104, 214, 165)
     end
 
@@ -358,7 +379,7 @@ local function getClosestPlayerToPoint(screenPoint)
     local minDist = math.huge
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character then
+        if player ~= localPlayer and not isTeammate(player) and player.Character then
             local head = player.Character:FindFirstChild("Head")
             local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 
