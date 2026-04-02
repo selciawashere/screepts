@@ -1,0 +1,197 @@
+    local cloneref = cloneref or clonereference or function(i) return i end
+    local ReplicatedStorage = cloneref(game:GetService("ReplicatedStorage"))
+    local WindUI
+
+    do
+        local ok, result = pcall(function()
+            return require("./src/Init")
+        end)
+        if ok then
+            WindUI = result
+        else
+            if cloneref(game:GetService("RunService")):IsStudio() then
+                WindUI = require(cloneref(ReplicatedStorage:WaitForChild("WindUI"):WaitForChild("Init")))
+            else
+                WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+            end
+        end
+    end
+
+    local Window = WindUI:CreateWindow({
+        Title = "Hypershot (LITE ONLY)",
+        Icon = "rbxassetid://95355489476446",
+        Size = UDim2.new(0, 600, 0, 430),
+        Center = true,
+        Resizable = true
+    })
+
+    local MainTab = Window:Tab({
+        Title = "Main"
+    })
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local Camera = workspace.CurrentCamera
+    local Mouse = LocalPlayer:GetMouse()
+    local RunService = game:GetService("RunService")
+
+    local GetPlayers = Players.GetPlayers
+
+    local function FindFirstChild(obj, child)
+        return obj and obj:FindFirstChild(child)
+    end
+
+    local SilentAimEnabled = false
+    local AimbotEnabled = false
+    local FOV_Silent = 90
+    local FOV_Aimbot = 70
+    local AimbotSmoothness = 0.13
+
+    local FOVCircle_Silent
+    local FOVCircle_Aimbot
+
+    local Section = MainTab:Section({
+        Title = "Gunmods"
+    })
+
+
+    Section:Button({
+        Title = "Zero Spread, No Recoil, Max ScopeSpeed ",
+        Callback = function()
+            for _, v in next, getgc(true) do
+                if typeof(v) == 'table' and rawget(v, 'Spread') then
+                    rawset(v, 'Spread', 0)
+                    rawset(v, 'BaseSpread', 0)
+                    rawset(v, 'MinCamRecoil', Vector3.new())
+                    rawset(v, 'MaxCamRecoil', Vector3.new())
+                    rawset(v, 'MinRotRecoil', Vector3.new())
+                    rawset(v, 'MaxRotRecoil', Vector3.new())
+                    rawset(v, 'MinTransRecoil', Vector3.new())
+                    rawset(v, 'MaxTransRecoil', Vector3.new())
+                    rawset(v, 'ScopeSpeed', 100)
+                    print('ok')
+                end
+            end
+        end
+    })
+
+    Section:Button({
+        Title = "Infinite Ammo ",
+        Callback = function()
+            for _, v in next, getgc(true) do
+                if typeof(v) == 'table' and (rawget(v, 'Ammo') or rawget(v, 'FillAmmo')) then
+                    if rawget(v, 'Ammo') ~= nil then
+                        rawset(v, 'Ammo', math.huge)
+                    end
+                    if rawget(v, 'FillAmmo') ~= nil then
+                        rawset(v, 'FillAmmo', math.huge)
+                    end
+                    print('Infinite Ammo set')
+                end
+            end
+        end
+    })
+
+    Section:Button({
+        Title = "No Recoil ",
+        Callback = function()
+            for _, v in next, getgc(true) do
+                if typeof(v) == 'table' and (rawget(v, 'MinCamRecoil') or rawget(v, 'MaxCamRecoil')) then
+                    rawset(v, 'MinCamRecoil', Vector3.new())
+                    rawset(v, 'MaxCamRecoil', Vector3.new())
+                    rawset(v, 'MinRotRecoil', Vector3.new())
+                    rawset(v, 'MaxRotRecoil', Vector3.new())
+                    rawset(v, 'MinTransRecoil', Vector3.new())
+                    rawset(v, 'MaxTransRecoil', Vector3.new())
+                    print('No Recoil set')
+                end
+            end
+        end
+    })
+
+    Section:Button({
+        Title = "Fast Reload",
+        Callback = function()
+            for _, v in next, getgc(true) do
+                if typeof(v) == 'table' and rawget(v, 'ReloadTime') then
+                    rawset(v, 'ReloadTime', 0.01)
+                    print('Fast Reload set')
+                elseif typeof(v) == 'table' and rawget(v, 'Reload') then
+                    local reload = rawget(v, 'Reload')
+                    if typeof(reload) == 'table' and rawget(reload, 'Duration') then
+                        rawset(reload, 'Duration', 0.01)
+                        print('Fast Reload Duration set (nested)')
+                    end
+                    if typeof(reload) == 'table' and rawget(reload, 'Time') then
+                        rawset(reload, 'Time', 0.01)
+                        print('Fast Reload Time set (nested)')
+                    end
+                end
+            end
+        end
+    })
+
+    Section:Paragraph({
+        Title = "Notice",
+        Desc = "These actions scan all Lua objects via getgc, and patch matching fields. May need to re-press if changes are overridden or weapons reload."
+    })
+
+
+    local MiscSection = MainTab:Section({
+        Title = "Miscellaneous"
+    })
+
+
+    MiscSection:Button({
+        Title = "Reset Character",
+        Callback = function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.Health = 0
+                print("Character reset")
+            end
+        end
+    })
+
+    MiscSection:Button({
+        Title = "Set WalkSpeed 50",
+        Callback = function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.WalkSpeed = 50
+                print("WalkSpeed set to 50")
+            end
+        end
+    })
+
+    MiscSection:Button({
+        Title = "Set JumpPower 100",
+        Callback = function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid.JumpPower = 100
+                print("JumpPower set to 100")
+            end
+        end
+    })
+
+    MiscSection:Button({
+        Title = "Copy Game JobId",
+        Callback = function()
+            if setclipboard then
+                setclipboard(game.JobId or "")
+                print("Game JobId copied to clipboard.")
+            else
+                print("Clipboard API not available.")
+            end
+        end
+    })
+
+    MiscSection:Paragraph({
+        Title = "Miscellaneous Tools",
+        Desc = "Various helpful utilities: teleporting, resetting, speed/jump editing, and more."
+    })
+
+    MiscSection:Paragraph({
+        Title = "Info",
+        Desc = "Join our Discord for news, support, and more: <font color=\"rgb(114,137,218)\">https://discord.gg/ronixstudios</font>",
+        RichText = true,
+        TitleColor = Color3.fromRGB(114, 137, 218), 
+        DescColor = Color3.fromRGB(220, 220, 220)
+    })
