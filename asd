@@ -2257,7 +2257,7 @@ local Library do
         Library = nil 
         getgenv().Library = nil
 
-        UserInputService.MouseIconEnabled = false
+        UserInputService.MouseIconEnabled = true
     end
 
     Library.GetImage = function(self, Image)
@@ -7661,7 +7661,7 @@ local Library do
                     end)
                 end
 
-                UserInputService.MouseIconEnabled = false
+                UserInputService.MouseIconEnabled = true
             end
 
             local Debounce = false 
@@ -7717,7 +7717,7 @@ local Library do
                     Debounce = false
                     Items["MainFrame"].Instance.Visible = Bool
 
-                    UserInputService.MouseIconEnabled = false
+                    UserInputService.MouseIconEnabled = true
                 end)
             end
 
