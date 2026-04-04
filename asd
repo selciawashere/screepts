@@ -2257,7 +2257,7 @@ local Library do
         Library = nil 
         getgenv().Library = nil
 
-        UserInputService.MouseIconEnabled = false
+        UserInputService.MouseIconEnabled = true
     end
 
     Library.GetImage = function(self, Image)
@@ -7661,26 +7661,7 @@ local Library do
                     end)
                 end
 
-                UserInputService.MouseIconEnabled = false
-
-                Items["MouseImage"] = Instances:Create("ImageLabel", {
-                    Parent = Library.Holder.Instance,
-                    Name = "\0",
-                    ScaleType = Enum.ScaleType.Fit,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Image = "rbxassetid://136489814131946",
-                    BackgroundTransparency = 1,
-                    Position = UDim2New(0, 0, 0, 0),
-                    Size = UDim2New(0, 20, 0, 20),
-                    ZIndex = 99999,
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(255, 255, 255)
-                })  Items["MouseImage"]:AddToTheme({ImageColor3 = "Accent"})
-
-                Library:Connect(RunService.RenderStepped, function()
-                    local MouseLocation = UserInputService:GetMouseLocation() 
-                    Items["MouseImage"].Instance.Position = UDim2New(0, MouseLocation.X - 1, 0, MouseLocation.Y - 56)
-                end)
+                UserInputService.MouseIconEnabled = true
             end
 
             local Debounce = false 
@@ -7736,13 +7717,7 @@ local Library do
                     Debounce = false
                     Items["MainFrame"].Instance.Visible = Bool
 
-                    if Window.IsOpen then
-                        Items["MouseImage"].Instance.Visible = true
-                        UserInputService.MouseIconEnabled = false 
-                    else
-                        Items["MouseImage"].Instance.Visible = false
-                        UserInputService.MouseIconEnabled = true 
-                    end
+                    UserInputService.MouseIconEnabled = true
                 end)
             end
 
