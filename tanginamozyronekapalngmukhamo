@@ -1,0 +1,343 @@
+if _G.FlowNPCFarm and _G.FlowNPCFarm.Stop then
+    _G.FlowNPCFarm.Stop()
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+local state = {
+    running = true,
+    selectedNpc = nil,
+    autoFarm = false,
+    autoSkill = false,
+    autoUltimate = false,
+    window = nil
+}
+
+local npcDropdown = nil
+local librarySource = nil
+local lastHitRemoteAt = 0
+local lastSkillRemoteAt = 0
+local lastUltimateRemoteAt = 0
+
+if isfile and isfile("flowuisource.lua") then
+    librarySource = readfile("flowuisource.lua")
+else
+    librarySource = game:HttpGet("https://raw.githubusercontent.com/0x1s2s/9xx38xx374723ui/refs/heads/main/eee")
+end
+
+local Library = loadstring(librarySource)()
+local Window = Library.new({
+    Name = "Flow Hub | NPC Farm",
+    Icon = "rbxassetid://98092584632154",
+    Accent = Color3.fromRGB(0, 200, 255),
+    Size = UDim2.fromOffset(520, 420)
+})
+
+state.window = Window
+
+local function notifyFlow(title, description, duration)
+    if state.window and state.window.Notify then
+        state.window:Notify({
+            Title = title,
+            Description = description,
+            Duration = duration or 3
+        })
+    end
+end
+
+local function getNpcOptions()
+    local npcFolder = Workspace:FindFirstChild("NPCs")
+    local children = npcFolder and npcFolder:GetChildren() or {}
+    local options = {}
+
+    for index, npc in ipairs(children) do
+        table.insert(options, string.format("%d: %s", index, npc.Name))
+    end
+
+    if #options == 0 then
+        table.insert(options, "No NPCs Found")
+    end
+
+    return options
+end
+
+local function getSelectedNpc()
+    local option = state.selectedNpc
+    local index = tonumber(type(option) == "string" and option:match("^(%d+):"))
+    local npcFolder = Workspace:FindFirstChild("NPCs")
+    local children = npcFolder and npcFolder:GetChildren() or nil
+
+    if not index or not children then
+        return nil
+    end
+
+    return children[index]
+end
+
+local function refreshNpcDropdown()
+    local options = getNpcOptions()
+    local found = false
+
+    for _, option in ipairs(options) do
+        if option == state.selectedNpc then
+            found = true
+            break
+        end
+    end
+
+    if not found then
+        state.selectedNpc = options[1]
+    end
+
+    if npcDropdown then
+        pcall(function()
+            if type(npcDropdown.Refresh) == "function" then
+                npcDropdown:Refresh(options)
+            elseif type(npcDropdown.SetOptions) == "function" then
+                npcDropdown:SetOptions(options)
+            elseif type(npcDropdown.SetValues) == "function" then
+                npcDropdown:SetValues(options)
+            elseif type(npcDropdown.Clear) == "function" and type(npcDropdown.Add) == "function" then
+                npcDropdown:Clear()
+                for _, option in ipairs(options) do
+                    npcDropdown:Add(option)
+                end
+            end
+        end)
+    end
+
+    return options
+end
+
+local function fireAutoFarmRemote()
+    if tick() - lastHitRemoteAt < 0.3 then
+        return
+    end
+
+    local bridgeNet = ReplicatedStorage:WaitForChild("BridgeNet2")
+    local remote = bridgeNet:WaitForChild("dataRemoteEvent")
+    local args = {
+        {
+            {
+                state = Enum.HumanoidStateType.Running,
+                hitcount = 2
+            },
+            "\f"
+        }
+    }
+
+    lastHitRemoteAt = tick()
+    remote:FireServer(unpack(args))
+end
+
+local function fireAutoSkillRemote()
+    if tick() - lastSkillRemoteAt < 1 then
+        return
+    end
+
+    local bridgeNet = ReplicatedStorage:WaitForChild("BridgeNet2")
+    local remote = bridgeNet:WaitForChild("dataRemoteEvent")
+    local skillKeys = {
+        Enum.KeyCode.One,
+        Enum.KeyCode.Two,
+        Enum.KeyCode.Three,
+        Enum.KeyCode.F,
+        Enum.KeyCode.X
+    }
+
+    lastSkillRemoteAt = tick()
+    for _, keyCode in ipairs(skillKeys) do
+        remote:FireServer({
+            keyCode,
+            "\026"
+        })
+    end
+end
+
+local function fireAutoUltimateRemote()
+    if tick() - lastUltimateRemoteAt < 1 then
+        return
+    end
+
+    local bridgeNet = ReplicatedStorage:WaitForChild("BridgeNet2")
+    local remote = bridgeNet:WaitForChild("dataRemoteEvent")
+
+    lastUltimateRemoteAt = tick()
+    remote:FireServer({
+        [2] = "'"
+    })
+end
+
+local function runNpcFarm()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local root = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local npc = getSelectedNpc()
+    if not npc or not root or not humanoid then
+        return
+    end
+
+    local npcPivot = npc:GetPivot()
+    local targetPosition = npcPivot.Position + Vector3.new(0, 25, 0)
+    local targetCFrame = CFrame.new(targetPosition)
+
+    humanoid.HipHeight = 25
+    character:PivotTo(targetCFrame)
+    root.AssemblyAngularVelocity = Vector3.zero
+    root.CFrame = root.CFrame.Rotation + root.Position + Vector3.new(0, 0, 0)
+    root.CFrame = CFrame.new(root.Position) * CFrame.Angles(math.rad(-90), 0, 0)
+
+    fireAutoFarmRemote()
+    if state.autoSkill then
+        fireAutoSkillRemote()
+    end
+    if state.autoUltimate then
+        fireAutoUltimateRemote()
+    end
+end
+
+local FarmSection = Window:CreateSection({
+    Name = "NPC Farm",
+    Icon = "rbxassetid://98092584632154"
+})
+
+local FarmTab = FarmSection:AddTab({
+    Name = "Autofarm",
+    Description = "Pivot above NPCs and fire the remote",
+    Icon = "rbxassetid://94219370057308"
+})
+
+local FarmGroup = FarmTab:AddGroup({
+    Name = "NPC Controls",
+    Side = "Left",
+    Icon = "rbxassetid://10723427199"
+})
+
+npcDropdown = FarmGroup:AddDropdown({
+    Name = "NPC Child",
+    Options = getNpcOptions(),
+    Default = getNpcOptions()[1],
+    Callback = function(value)
+        if value ~= "No NPCs Found" then
+            state.selectedNpc = value
+        end
+    end
+})
+
+state.selectedNpc = getNpcOptions()[1]
+
+FarmGroup:AddButton({
+    Name = "Refresh NPC List",
+    Callback = function()
+        local options = refreshNpcDropdown()
+        notifyFlow("NPC List", string.format("Loaded %d NPC children.", options[1] == "No NPCs Found" and 0 or #options), 4)
+    end
+})
+
+FarmGroup:AddToggle({
+    Name = "Auto Farm",
+    Default = false,
+    Callback = function(value)
+        state.autoFarm = value
+        if value then
+            local options = refreshNpcDropdown()
+            if options[1] == "No NPCs Found" then
+                state.autoFarm = false
+                notifyFlow("NPC Farm", "No NPCs found in workspace.NPCs.", 4)
+            end
+        end
+    end
+})
+
+FarmGroup:AddToggle({
+    Name = "Auto Skill",
+    Default = false,
+    Callback = function(value)
+        state.autoSkill = value
+    end
+})
+
+FarmGroup:AddToggle({
+    Name = "Auto Ultimate",
+    Default = false,
+    Callback = function(value)
+        state.autoUltimate = value
+    end
+})
+
+FarmGroup:AddButton({
+    Name = "Run Once",
+    Callback = function()
+        local ok, err = pcall(runNpcFarm)
+        if not ok then
+            notifyFlow("NPC Farm", tostring(err), 4)
+        end
+    end
+})
+
+FarmGroup:AddLabel({
+    Text = "Dropdown order follows workspace.NPCs:GetChildren()."
+})
+
+local SettingsSection = Window:CreateSection({
+    Name = "Window",
+    Icon = "rbxassetid://98092584632154"
+})
+
+local SettingsTab = SettingsSection:AddTab({
+    Name = "Settings",
+    Description = "Unload and control this script",
+    Icon = "rbxassetid://94219370057308"
+})
+
+local SettingsGroup = SettingsTab:AddGroup({
+    Name = "Controls",
+    Side = "Left",
+    Icon = "rbxassetid://14540833263"
+})
+
+local function stopFlowNpcFarm(deleteWindow)
+    state.running = false
+    state.autoFarm = false
+
+    if deleteWindow and state.window and state.window.Destroy then
+        pcall(function()
+            state.window:Destroy()
+        end)
+    end
+
+    _G.FlowNPCFarm = nil
+end
+
+SettingsGroup:AddButton({
+    Name = "Unload UI",
+    Callback = function()
+        stopFlowNpcFarm(true)
+    end
+})
+
+_G.FlowNPCFarm = {
+    Stop = stopFlowNpcFarm
+}
+
+task.spawn(function()
+    while state.running do
+        if state.autoFarm then
+            local ok, err = pcall(runNpcFarm)
+            if not ok then
+                notifyFlow("NPC Farm", tostring(err), 4)
+                task.wait(0.5)
+            else
+                task.wait()
+            end
+        else
+            task.wait(0.25)
+        end
+    end
+end)
+
+notifyFlow("Flow NPC Farm", "Standalone NPC autofarm loaded.", 4)
