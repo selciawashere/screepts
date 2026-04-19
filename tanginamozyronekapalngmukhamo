@@ -182,10 +182,10 @@ local function runNpcFarm()
     end
 
     local npcPivot = npc:GetPivot()
-    local targetPosition = npcPivot.Position + Vector3.new(0, 25, 0)
+    local targetPosition = npcPivot.Position + Vector3.new(0, 20, 0)
     local targetCFrame = CFrame.new(targetPosition)
 
-    humanoid.HipHeight = 25
+    humanoid.HipHeight = 20
     character:PivotTo(targetCFrame)
     root.AssemblyAngularVelocity = Vector3.zero
     root.CFrame = root.CFrame.Rotation + root.Position + Vector3.new(0, 0, 0)
