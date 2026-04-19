@@ -12,6 +12,7 @@ local state = {
     running = true,
     selectedNpc = nil,
     autoFarm = false,
+    autoCollectHeal = false,
     autoSkill = false,
     autoUltimate = false,
     window = nil
@@ -172,10 +173,60 @@ local function fireAutoUltimateRemote()
     })
 end
 
-local function runNpcFarm()
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local function getPlayerModel()
+    local workspacePlayers = Workspace:FindFirstChild("Players")
+    local playerModel = workspacePlayers and workspacePlayers:FindFirstChild(LocalPlayer.Name)
+
+    if playerModel then
+        return playerModel
+    end
+
+    return LocalPlayer.Character
+end
+
+local function getPlayerHumanoidAndRoot()
+    local character = getPlayerModel() or LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    if not character then
+        return nil, nil, nil
+    end
+
+    local humanoid = character:FindFirstChild("Humanoid") or character:FindFirstChildOfClass("Humanoid")
     local root = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+    return character, humanoid, root
+end
+
+local function needsHeal()
+    local _, humanoid = getPlayerHumanoidAndRoot()
+    if not humanoid then
+        return false
+    end
+
+    return humanoid.Health < humanoid.MaxHealth
+end
+
+local function collectHeal()
+    local visuals = Workspace:FindFirstChild("Visuals")
+    local character, humanoid, root = getPlayerHumanoidAndRoot()
+    if not visuals or not humanoid or not root then
+        return false
+    end
+
+    for _, child in ipairs(visuals:GetChildren()) do
+        if child.Name == "Heal" and child:IsA("Part") then
+            local targetCFrame = child.CFrame + Vector3.new(0, 3, 0)
+            character:PivotTo(targetCFrame)
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+            return true
+        end
+    end
+
+    return false
+end
+
+local function runNpcFarm()
+    local character, humanoid, root = getPlayerHumanoidAndRoot()
     local npc = getSelectedNpc()
     if not npc or not root or not humanoid then
         return
@@ -269,6 +320,14 @@ FarmGroup:AddToggle({
     end
 })
 
+FarmGroup:AddToggle({
+    Name = "auto collect heal",
+    Default = false,
+    Callback = function(value)
+        state.autoCollectHeal = value
+    end
+})
+
 FarmGroup:AddButton({
     Name = "tumakbo",
     Callback = function()
@@ -282,20 +341,12 @@ FarmGroup:AddButton({
 FarmGroup:AddLabel({
     Text = "looking for kantutan siogo location"
 })
-FarmGroup:AddLabel({
-    Text = "gumawa po neto is tarantado"
-})
-FarmGroup:AddLabel({
-    Text = "kawawa po si hev abi nakulong aray ko"
-})
-FarmGroup:AddLabel({
-    Text = "sana bumalik yung presyo ng gas, galit napo si jian"
-})
 
 
 local function stopFlowNpcFarm(deleteWindow)
     state.running = false
     state.autoFarm = false
+    state.autoCollectHeal = false
 
     if deleteWindow and state.window and state.window.Destroy then
         pcall(function()
@@ -312,7 +363,15 @@ _G.FlowNPCFarm = {
 
 task.spawn(function()
     while state.running do
-        if state.autoFarm then
+        if state.autoCollectHeal and needsHeal() then
+            local ok, err = pcall(collectHeal)
+            if not ok then
+                notifyFlow("Auto Heal", tostring(err), 4)
+                task.wait(0.5)
+            else
+                task.wait(0.2)
+            end
+        elseif state.autoFarm then
             local ok, err = pcall(runNpcFarm)
             if not ok then
                 notifyFlow("NPC Farm", tostring(err), 4)
