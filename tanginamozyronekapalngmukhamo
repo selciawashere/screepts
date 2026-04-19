@@ -36,6 +36,24 @@ local Window = Library:Window({
 
 state.window = Window
 
+local function queueAutoExecute()
+    local queueTeleport = queue_on_teleport or queueonteleport
+    if not queueTeleport and syn and syn.queue_on_teleport then
+        queueTeleport = syn.queue_on_teleport
+    end
+
+    if not queueTeleport then
+        return false
+    end
+
+    local scriptSource = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/selciawashere/screepts/refs/heads/main/tanginamozyronekapalngmukhamo"))()]]
+    local ok = pcall(queueTeleport, scriptSource)
+
+    return ok
+end
+
+queueAutoExecute()
+
 local function notifyFlow(title, description, duration)
     if state.window and state.window.Notification then
         state.window:Notification({
