@@ -4,6 +4,7 @@ end
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
 local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
@@ -11,15 +12,17 @@ local LocalPlayer = Players.LocalPlayer
 local state = {
     running = true,
     selectedNpc = nil,
-    autoFarm = false,
+    autoFarm = true,
     autoCollectHeal = true,
-    autoReplay = false,
-    autoSkill = false,
-    autoUltimate = false,
+    autoAntiAfk = true,
+    autoReplay = true,
+    autoSkill = true,
+    autoUltimate = true,
     window = nil
 }
 
 local npcDropdown = nil
+local antiAfkConnection = nil
 local lastHitRemoteAt = 0
 local lastSkillRemoteAt = 0
 local lastUltimateRemoteAt = 0
@@ -62,6 +65,24 @@ local function notifyFlow(title, description, duration)
             Duration = duration or 3
         })
     end
+end
+
+local function setAntiAfkEnabled(enabled)
+    state.autoAntiAfk = enabled
+
+    if antiAfkConnection then
+        antiAfkConnection:Disconnect()
+        antiAfkConnection = nil
+    end
+
+    if not enabled then
+        return
+    end
+
+    antiAfkConnection = LocalPlayer.Idled:Connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
 end
 
 local function getNpcOptions()
@@ -321,7 +342,7 @@ FarmGroup:Button({
 
 FarmGroup:Toggle({
     Text = "Auto Farm",
-    Default = false,
+    Default = true,
     Callback = function(value)
         state.autoFarm = value
         if value then
@@ -336,7 +357,7 @@ FarmGroup:Toggle({
 
 FarmGroup:Toggle({
     Text = "Auto Skill",
-    Default = false,
+    Default = true,
     Callback = function(value)
         state.autoSkill = value
     end
@@ -344,7 +365,7 @@ FarmGroup:Toggle({
 
 FarmGroup:Toggle({
     Text = "Auto Ultimate",
-    Default = false,
+    Default = true,
     Callback = function(value)
         state.autoUltimate = value
     end
@@ -352,9 +373,17 @@ FarmGroup:Toggle({
 
 FarmGroup:Toggle({
     Text = "Auto Replay",
-    Default = false,
+    Default = true,
     Callback = function(value)
         state.autoReplay = value
+    end
+})
+
+FarmGroup:Toggle({
+    Text = "Anti AFK",
+    Default = true,
+    Callback = function(value)
+        setAntiAfkEnabled(value)
     end
 })
 
@@ -380,10 +409,11 @@ FarmTab:Select()
 
 
 local function stopFlowNpcFarm(deleteWindow)
-    state.running = false
-    state.autoFarm = false
+    state.running = true
+    state.autoFarm = true
     state.autoCollectHeal = true
-    state.autoReplay = false
+    setAntiAfkEnabled(true)
+    state.autoReplay = true
 
     if deleteWindow and state.window and state.window.Destroy then
         pcall(function()
@@ -446,4 +476,3 @@ task.spawn(function()
 end)
 
 notifyFlow("ready napo kumantot lets go!", 4)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/evxncodes/mainroblox/main/anti-afk", true))()
