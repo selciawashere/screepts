@@ -12,39 +12,35 @@ local state = {
     running = true,
     selectedNpc = nil,
     autoFarm = false,
-    autoCollectHeal = false,
+    autoCollectHeal = true,
+    autoReplay = false,
     autoSkill = false,
     autoUltimate = false,
     window = nil
 }
 
 local npcDropdown = nil
-local librarySource = nil
 local lastHitRemoteAt = 0
 local lastSkillRemoteAt = 0
 local lastUltimateRemoteAt = 0
+local lastReplayRemoteAt = 0
+local lastHealTeleportAt = 0
+local HEAL_RETRY_COOLDOWN = 0.4
+local HEAL_RETURN_DELAY = 0.15
 
-if isfile and isfile("flowuisource.lua") then
-    librarySource = readfile("flowuisource.lua")
-else
-    librarySource = game:HttpGet("https://raw.githubusercontent.com/0x1s2s/9xx38xx374723ui/refs/heads/main/eee")
-end
-
-local Library = loadstring(librarySource)()
-local Window = Library.new({
-    Name = "Flow Hub | NPC Farm",
-    Icon = "rbxassetid://98092584632154",
-    Accent = Color3.fromRGB(0, 200, 255),
-    Size = UDim2.fromOffset(520, 420)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Rain-Design/Libraries/main/Shaman/Library.lua"))()
+local Flags = Library.Flags
+local Window = Library:Window({
+    Text = "Flow Hub | NPC Farm"
 })
 
 state.window = Window
 
 local function notifyFlow(title, description, duration)
-    if state.window and state.window.Notify then
-        state.window:Notify({
+    if state.window and state.window.Notification then
+        state.window:Notification({
             Title = title,
-            Description = description,
+            Text = description,
             Duration = duration or 3
         })
     end
@@ -94,20 +90,11 @@ local function refreshNpcDropdown()
         state.selectedNpc = options[1]
     end
 
-    if npcDropdown then
+    if npcDropdown and type(npcDropdown.Refresh) == "function" then
         pcall(function()
-            if type(npcDropdown.Refresh) == "function" then
-                npcDropdown:Refresh(options)
-            elseif type(npcDropdown.SetOptions) == "function" then
-                npcDropdown:SetOptions(options)
-            elseif type(npcDropdown.SetValues) == "function" then
-                npcDropdown:SetValues(options)
-            elseif type(npcDropdown.Clear) == "function" and type(npcDropdown.Add) == "function" then
-                npcDropdown:Clear()
-                for _, option in ipairs(options) do
-                    npcDropdown:Add(option)
-                end
-            end
+            npcDropdown:Refresh({
+                List = options
+            })
         end)
     end
 
@@ -173,6 +160,24 @@ local function fireAutoUltimateRemote()
     })
 end
 
+local function fireAutoReplayRemote()
+    if tick() - lastReplayRemoteAt < 1 then
+        return
+    end
+
+    local bridgeNet = ReplicatedStorage:WaitForChild("BridgeNet2")
+    local remote = bridgeNet:WaitForChild("dataRemoteEvent")
+    local args = {
+        {
+            1,
+            "*"
+        }
+    }
+
+    lastReplayRemoteAt = tick()
+    remote:FireServer(unpack(args))
+end
+
 local function getPlayerModel()
     local workspacePlayers = Workspace:FindFirstChild("Players")
     local playerModel = workspacePlayers and workspacePlayers:FindFirstChild(LocalPlayer.Name)
@@ -212,17 +217,30 @@ local function collectHeal()
         return false
     end
 
+    local nearestHeal = nil
+    local nearestDistance = math.huge
+
     for _, child in ipairs(visuals:GetChildren()) do
         if child.Name == "Heal" and child:IsA("Part") then
-            local targetCFrame = child.CFrame + Vector3.new(0, 3, 0)
-            character:PivotTo(targetCFrame)
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
-            return true
+            local distance = (root.Position - child.Position).Magnitude
+            if distance < nearestDistance then
+                nearestDistance = distance
+                nearestHeal = child
+            end
         end
     end
 
-    return false
+    if not nearestHeal then
+        return false
+    end
+
+    local targetCFrame = nearestHeal.CFrame + Vector3.new(0, 1.5, 0)
+    character:PivotTo(targetCFrame)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    lastHealTeleportAt = tick()
+
+    return true
 end
 
 local function runNpcFarm()
@@ -251,27 +269,18 @@ local function runNpcFarm()
     end
 end
 
-local FarmSection = Window:CreateSection({
-    Name = "lupaypay si zyrone",
-    Icon = "rbxassetid://98092584632154"
+local FarmTab = Window:Tab({
+    Text = "Farm"
 })
 
-local FarmTab = FarmSection:AddTab({
-    Name = "tite",
-    Description = "bayag",
-    Icon = "rbxassetid://94219370057308"
+local FarmGroup = FarmTab:Section({
+    Text = "NPC Farm"
 })
 
-local FarmGroup = FarmTab:AddGroup({
-    Name = "mga pepe",
-    Side = "Left",
-    Icon = "rbxassetid://10723427199"
-})
-
-npcDropdown = FarmGroup:AddDropdown({
-    Name = "bata",
-    Options = getNpcOptions(),
-    Default = getNpcOptions()[1],
+npcDropdown = FarmGroup:Dropdown({
+    Text = "NPC",
+    List = getNpcOptions(),
+    Flag = "SelectedNpc",
     Callback = function(value)
         if value ~= "No NPCs Found" then
             state.selectedNpc = value
@@ -280,17 +289,20 @@ npcDropdown = FarmGroup:AddDropdown({
 })
 
 state.selectedNpc = getNpcOptions()[1]
+if Flags then
+    Flags.SelectedNpc = state.selectedNpc
+end
 
-FarmGroup:AddButton({
-    Name = "Refresh NPC List",
+FarmGroup:Button({
+    Text = "Refresh NPC List",
     Callback = function()
         local options = refreshNpcDropdown()
         notifyFlow("NPC List", string.format("Loaded %d NPC children.", options[1] == "No NPCs Found" and 0 or #options), 4)
     end
 })
 
-FarmGroup:AddToggle({
-    Name = "maag jakol",
+FarmGroup:Toggle({
+    Text = "Auto Farm",
     Default = false,
     Callback = function(value)
         state.autoFarm = value
@@ -304,32 +316,36 @@ FarmGroup:AddToggle({
     end
 })
 
-FarmGroup:AddToggle({
-    Name = "duket",
+FarmGroup:Toggle({
+    Text = "Auto Skill",
     Default = false,
     Callback = function(value)
         state.autoSkill = value
     end
 })
 
-FarmGroup:AddToggle({
-    Name = "lumakas",
+FarmGroup:Toggle({
+    Text = "Auto Ultimate",
     Default = false,
     Callback = function(value)
         state.autoUltimate = value
     end
 })
 
-FarmGroup:AddToggle({
-    Name = "auto collect heal",
+FarmGroup:Toggle({
+    Text = "Auto Replay",
     Default = false,
     Callback = function(value)
-        state.autoCollectHeal = value
+        state.autoReplay = value
     end
 })
 
-FarmGroup:AddButton({
-    Name = "tumakbo",
+FarmGroup:Label({
+    Text = "auto collect heal is always active"
+})
+
+FarmGroup:Button({
+    Text = "Run Once",
     Callback = function()
         local ok, err = pcall(runNpcFarm)
         if not ok then
@@ -338,15 +354,18 @@ FarmGroup:AddButton({
     end
 })
 
-FarmGroup:AddLabel({
+FarmGroup:Label({
     Text = "looking for kantutan siogo location"
 })
+
+FarmTab:Select()
 
 
 local function stopFlowNpcFarm(deleteWindow)
     state.running = false
     state.autoFarm = false
-    state.autoCollectHeal = false
+    state.autoCollectHeal = true
+    state.autoReplay = false
 
     if deleteWindow and state.window and state.window.Destroy then
         pcall(function()
@@ -363,22 +382,45 @@ _G.FlowNPCFarm = {
 
 task.spawn(function()
     while state.running do
-        if state.autoCollectHeal and needsHeal() then
-            local ok, err = pcall(collectHeal)
-            if not ok then
-                notifyFlow("Auto Heal", tostring(err), 4)
-                task.wait(0.5)
-            else
-                task.wait(0.2)
+        local didWork = false
+
+        if state.autoFarm then
+            if state.autoCollectHeal and needsHeal() and tick() - lastHealTeleportAt >= HEAL_RETRY_COOLDOWN then
+                local ok, didHeal = pcall(collectHeal)
+                if not ok then
+                    notifyFlow("Auto Heal", tostring(didHeal), 4)
+                elseif didHeal then
+                    didWork = true
+                    task.wait(HEAL_RETURN_DELAY)
+                end
             end
-        elseif state.autoFarm then
+
             local ok, err = pcall(runNpcFarm)
             if not ok then
                 notifyFlow("NPC Farm", tostring(err), 4)
-                task.wait(0.5)
             else
-                task.wait()
+                didWork = true
             end
+        elseif state.autoCollectHeal and needsHeal() then
+            local ok, err = pcall(collectHeal)
+            if not ok then
+                notifyFlow("Auto Heal", tostring(err), 4)
+            else
+                didWork = true
+            end
+        end
+
+        if state.autoReplay then
+            local ok, err = pcall(fireAutoReplayRemote)
+            if not ok then
+                notifyFlow("Auto Replay", tostring(err), 4)
+            else
+                didWork = true
+            end
+        end
+
+        if didWork then
+            task.wait()
         else
             task.wait(0.25)
         end
